@@ -59,11 +59,17 @@ void fft_audio_init(float * data,
     _plan = fftwf_plan_dft_1d(_block_size, _in, _out, FFTW_FORWARD, FFTW_ESTIMATE);
 }
 
-float * fft_audio_next_block()
+fft_audio_block * fft_audio_next_block()
 {
     if (_block_offset + _block_size > _data_size) return NULL;
 
     float * bins = (float *) calloc(_bins_size, sizeof(float));
+    float max = FLT_MIN;
+    float min = FLT_MAX;
+    float power = 0;
+    float realSum = 0;
+    float imagSum = 0;
+
     for (size_t i = 0; i < _block_size; ++i) {
         _in[i][0] = _data[_block_offset + i];
         _in[i][1] = 0.f;
@@ -75,17 +81,43 @@ float * fft_audio_next_block()
     const float period = 1.f / _samplerate;
     size_t j = 0;
     for (size_t i = 0; i < _bins_size; ++i) {
-        float sum = 0.f;
+        float magSum = 0.f;
         size_t s = 0;
-        while (j < _block_size &&  _fft_audio_frequency(j, period, _block_size) <= i) {
-            sum += sqrtf(_out[j][0] * _out[j][0] + _out[j][1] * _out[j][1]);
+        while (j < _block_size >> 1 &&  _fft_audio_frequency(j, period, _block_size) <= i) {
+            const float real = _out[j][0];
+            const float imag = _out[j][1];
+            const float val = real * real + imag * imag;
+            const float mag = sqrtf(val);
+
+            magSum += mag;
             s++;
             j++;
+
+            if (mag > max) max = mag;
+            if (mag < min) min = mag;
+            power += val;
+            realSum += real;
+            imagSum += imag;
         }
-        bins[i] = sum / s;
+        bins[i] = magSum / s;
     }
 
-    return bins;
+    fft_audio_block * block = (fft_block *) calloc(1, sizeof(fft_block));
+    block->data = bins;
+    block->size = _bins_size;
+    block->max = max;
+    block->min = min;
+    block->power = power;
+    block->amplitude = power / _block_size;
+    block->phase = atanf(imagSum / realSum);
+
+    return block;
+}
+
+void fft_audio_block_free(fft_block * block)
+{
+    free(block->data);
+    free(block);
 }
 
 void fft_audio_free() {
