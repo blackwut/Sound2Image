@@ -23,9 +23,9 @@ size_t _fft_audio_best_block_size(size_t block_size) {
     return block_size + 1;
 }
 
-float _fft_audio_frequency(size_t i, float period, size_t n)
+float _fft_audio_frequency_sample(size_t i)
 {
-    return i / (float)(period * _block_size);
+    return i * (_samplerate / (float)_block_size);
 }
 
 void _fft_audio_plan_free() {
@@ -78,12 +78,11 @@ fft_audio_block * fft_audio_next_block()
 
     fftwf_execute(_plan);
 
-    const float period = 1.f / _samplerate;
     size_t j = 0;
     for (size_t i = 0; i < _bins_size; ++i) {
         float magSum = 0.f;
         size_t s = 0;
-        while (j < _block_size >> 1 &&  _fft_audio_frequency(j, period, _block_size) <= i) {
+        while (j < _block_size >> 1 &&  _fft_audio_frequency_sample(j) <= i) {
             const float real = _out[j][0];
             const float imag = _out[j][1];
             const float val = real * real + imag * imag;
@@ -102,7 +101,7 @@ fft_audio_block * fft_audio_next_block()
         bins[i] = magSum / s;
     }
 
-    fft_audio_block * block = (fft_block *) calloc(1, sizeof(fft_block));
+    fft_audio_block * block = (fft_audio_block *) calloc(1, sizeof(fft_audio_block));
     block->data = bins;
     block->size = _bins_size;
     block->max = max;
@@ -114,7 +113,7 @@ fft_audio_block * fft_audio_next_block()
     return block;
 }
 
-void fft_audio_block_free(fft_block * block)
+void fft_audio_block_free(fft_audio_block * block)
 {
     free(block->data);
     free(block);
