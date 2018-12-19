@@ -21,7 +21,8 @@ pthread_t tid[32];
 size_t taskCount = 0;
 
 
-void time_copy(struct timespec * td, struct timespec ts)
+void time_copy(struct timespec * td,
+               struct timespec ts)
 {
     td->tv_sec  = ts.tv_sec;
     td->tv_nsec = ts.tv_nsec;
@@ -46,7 +47,8 @@ void time_mono_diff(struct timespec * t2,
     }
 }
 
-void time_add_ms(struct timespec * t, const int ms)
+void time_add_ms(struct timespec * t,
+                 const int ms)
 {
     t->tv_sec += ms / 1000;
     t->tv_nsec += (ms % 1000) * 1000000;
@@ -56,7 +58,8 @@ void time_add_ms(struct timespec * t, const int ms)
     }
 }
 
-int time_cmp(const struct timespec t1, const struct timespec t2)
+int time_cmp(const struct timespec t1,
+             const struct timespec t2)
 {
     if (t1.tv_sec > t2.tv_sec) return 1;
     if (t1.tv_sec < t2.tv_sec) return -1;
@@ -66,7 +69,6 @@ int time_cmp(const struct timespec t1, const struct timespec t2)
 }
 
 #ifdef __MACH__
-
 /* emulate clock_nanosleep for CLOCK_MONOTONIC and TIMER_ABSTIME */
 int clock_nanosleep_abstime(const struct timespec * req)
 {
@@ -78,15 +80,17 @@ int clock_nanosleep_abstime(const struct timespec * req)
     }
     return retval;
 }
-
 #else /* POSIX */
     /* clock_nanosleep for CLOCK_MONOTONIC and TIMER_ABSTIME */
-    #define clock_nanosleep_abstime( req ) \
+    #define clock_nanosleep_abstime(req) \
         clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME,(req), NULL)
 #endif
 
 
-int ptask_create(void*(*task)(void *), const int period, const int deadline, const int priority)
+int ptask_create(void*(*task)(void *),
+                 const int period,
+                 const int deadline,
+                 const int priority)
 {
     pthread_attr_t myatt;
     struct sched_param mypar;
@@ -101,7 +105,7 @@ int ptask_create(void*(*task)(void *), const int period, const int deadline, con
 
     pthread_attr_init(&myatt);
     pthread_attr_setinheritsched(&myatt, PTHREAD_EXPLICIT_SCHED);
-    pthread_attr_setschedpolicy(&myatt, SCHED_FIFO);
+    pthread_attr_setschedpolicy(&myatt, SCHED_RR);
     mypar.sched_priority = tp[id].priority;
     pthread_attr_setschedparam(&myatt, &mypar);
     tret = pthread_create(&tid[id], &myatt, task, (void *)(&tp[id]));
