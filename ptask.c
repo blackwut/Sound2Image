@@ -2,8 +2,10 @@
 #include <pthread.h>
 #include <sched.h>
 #include <time.h>
+#include <assert.h>
 
 #define TIME_GIGA (1000000000)
+#define MAX_TASKS 32
 
 struct task_par {
     int arg;            /* task argument */
@@ -16,8 +18,8 @@ struct task_par {
     struct timespec dl; /* abs. deadline */
 };
 
-struct task_par tp[32];
-pthread_t tid[32];
+struct task_par tp[MAX_TASKS];
+pthread_t tid[MAX_TASKS];
 size_t taskCount = 0;
 
 
@@ -97,6 +99,8 @@ int ptask_create(void*(*task)(void *),
     int tret;
 
     int id = taskCount++;
+    assert(id < MAX_TASKS);
+
     tp[id].arg = id;
     tp[id].period = period;
     tp[id].deadline = deadline;
