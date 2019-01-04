@@ -1,8 +1,8 @@
 #include "bqueue.h"
-
 #include <assert.h>
 
-void bqueue_init(BQueue * q)
+
+int bqueue_create(BQueue * q)
 {
     assert(q != NULL);
 
@@ -12,6 +12,8 @@ void bqueue_init(BQueue * q)
     q->head = 0;
     q->tail = 0;
     pthread_mutex_init(&(q->mux), NULL);
+
+    return BQUEUE_SUCCESS;
 }
 
 void bqueue_lock(BQueue * q)
@@ -39,7 +41,7 @@ int bqueue_is_empty(BQueue * q)
     return isEmpty;
 }
 
-void bqueue_enqueue(BQueue * q,
+int bqueue_enqueue(BQueue * q,
                     void * data)
 {
     assert(q != NULL);
@@ -49,6 +51,8 @@ void bqueue_enqueue(BQueue * q,
     q->items[q->head] = data;
     q->head = q->head + 1;
     bqueue_unlock(q);
+
+    return BQUEUE_SUCCESS;
 }
 
 void * bqueue_dequeue(BQueue * q)
@@ -67,7 +71,7 @@ void * bqueue_dequeue(BQueue * q)
     return data;
 }
 
-void bqueue_destroy(BQueue * q, void(*item_free)(void *))
+int bqueue_destroy(BQueue * q, void(*item_free)(void *))
 {
     assert(q != NULL);
 
@@ -78,4 +82,6 @@ void bqueue_destroy(BQueue * q, void(*item_free)(void *))
     bqueue_unlock(q);
 
     pthread_mutex_destroy(&q->mux);
+
+    return BQUEUE_SUCCESS;
 }
