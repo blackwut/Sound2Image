@@ -4,10 +4,11 @@
 #include <assert.h>
 
 
-#define BEST_BLOCK_SIZE(b) (b > _samplerate ? b : _samplerate) + 1
-#define FREQUENCY_SAMPLE(i) (i * (_samplerate / (float)_block_size))
+#define BEST_BLOCK_SIZE(b) (((b) > _samplerate ? (b) : (_samplerate) + 1))
+#define FREQ_TO_SAMPLE(f) ((f) * (_block_size / (float)_samplerate))
+#define SAMPLE_TO_FREQ(s) ((s) * (_samplerate / (float)_block_size))
 
-float * _data = NULL;
+const float * _data;
 size_t _data_size;
 size_t _samplerate;
 
@@ -23,10 +24,10 @@ size_t _bins_size;
 
 
 /* Public functions */
-int fft_audio_init(float * data,
-                    size_t data_size,
-                    size_t samplerate,
-                    size_t block_size)
+int fft_audio_init(const float * data,
+                   const size_t data_size,
+                   const size_t samplerate,
+                   const size_t block_size)
 {
     assert(data != NULL);
     assert(data_size > 0);
@@ -68,52 +69,46 @@ int fft_audio_next_block(fft_audio_block * block)
 }
 
 int fft_audio_get_stats(fft_audio_stats * stats,
-                        fft_audio_block * block,
-                        size_t freq,
-                        size_t size)
+                        const fft_audio_block * block,
+                        const size_t freq,
+                        const size_t size)
 {
-    assert((freq + size) <= MAX_SAMPLERATE);
+    const size_t toFreq = freq + size;
+    assert(toFreq <= MAX_SAMPLERATE);
 
-    float bins[MAX_SAMPLERATE];
-    float max = FLT_MIN;
-    float min = FLT_MAX;
-    float power = 0;
-    float realSum = 0;
-    float imagSum = 0;
+    const size_t fromSample = FREQ_TO_SAMPLE(freq);
+    const size_t toSample = FREQ_TO_SAMPLE(toFreq);
+    double min = DBL_MAX;
+    double max = DBL_MIN;
+    double power = 0;
+    double realSum = 0;
+    double imagSum = 0;
 
-    size_t j = 0;
-    for (size_t i = freq; i < freq + size; ++i) {
-        float magSum = 0.f;
-        size_t s = 0;
-        while (FREQUENCY_SAMPLE(j) <= i) {
-            const float real = block->data[j][0];
-            const float imag = block->data[j][1];
-            const float val = real * real + imag * imag;
-            const float mag = sqrtf(val);
+    for (size_t i = fromSample; i < toSample; ++i) {
+        const float real = block->data[j][0];
+        const float imag = block->data[j][1];
+        const float val = real * real + imag * imag;
+        const float mag = sqrtf(val);
 
-            magSum += mag;
-            s++;
-            j++;
-
-            if (mag > max) max = mag;
-            if (mag < min) min = mag;
-            power += val;
-            realSum += real;
-            imagSum += imag;
-        }
-        bins[i] = magSum / s;
+        if (mag > max) max = mag;
+        if (mag < min) min = mag;
+        power   += val;
+        realSum += real;
+        imagSum += imag;
     }
 
-    stats->max = max;
-    stats->min = min;
-    stats->power = power;
-    stats->amplitude = power / _block_size;
-    stats->phase = atanf(imagSum / realSum);
+    stats->min          = min;
+    stats->max          = max;
+    stats->power        = power;
+    stats->amplitude    = 2 * sqrt(power) / _block_size;
+    stats->RMS          = amplitude * (sqrt(2) / 2);
+    stats->dB           = atanf(imagSum / realSum);
+    stats->phase        = 20 * log(stats->amplitude);
 
     return FFT_AUDIO_SUCCESS;
 }
 
 int fft_audio_free() {
-    if (_plan) fftwf_destroy_plan(_plan); // TODO: check what fftwf_destroy_plan returns
+    if (_plan) fftwf_destroy_plan(_plan); // TODO: check what fftwf_destroy_plan returns something
     return FFT_AUDIO_SUCCESS;
 }

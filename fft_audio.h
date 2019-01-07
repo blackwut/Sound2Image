@@ -1,5 +1,5 @@
-#ifndef FFT_AUDIO
-#define FFT_AUDIO
+#ifndef FFT_AUDIO_H
+#define FFT_AUDIO_H
 
 #include <math.h>
 #include <fftw3.h>
@@ -11,10 +11,12 @@
 #define MAX_BLOCK_SIZE   (MAX_SAMPLERATE * MAX_SECONDS)
 
 typedef struct fft_audio_stats {
-    float max;
     float min;
+    float max;
     float power;
     float amplitude;
+    float RMS;
+    float dB;
     float phase;
 } fft_audio_stats;
 
@@ -22,19 +24,18 @@ typedef struct fft_audio_block {
     fftwf_complex data[MAX_BLOCK_SIZE];
     size_t size;
     fft_audio_stats stats;
-
 } fft_audio_block;
 
 
-int fft_audio_init(float * data,
-                   size_t data_size,
-                   size_t samplerate,
-                   size_t block_size);
+int fft_audio_init(const float * data,
+                   const size_t data_size,
+                   const size_t samplerate,
+                   const size_t block_size);
 int fft_audio_next_block(fft_audio_block * block);
 int fft_audio_get_stats(fft_audio_stats * stats,
-                        fft_audio_block * block,
-                        size_t freq,
-                        size_t size);
+                        const fft_audio_block * block,
+                        const size_t freq,
+                        const size_t size);
 int fft_audio_free();
 
 #endif
