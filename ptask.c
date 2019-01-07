@@ -5,7 +5,7 @@
 #include <assert.h>
 
 #define TIME_GIGA (1000000000)
-#define MAX_TASKS 32
+#define MAX_TASKS (32)
 
 struct task_par {
     int arg;            /* task argument */
@@ -96,7 +96,6 @@ int ptask_create(void*(*task)(void *),
 {
     pthread_attr_t myatt;
     struct sched_param mypar;
-    int tret;
 
     int id = taskCount++;
     assert(id < MAX_TASKS);
@@ -113,7 +112,10 @@ int ptask_create(void*(*task)(void *),
     mypar.sched_priority = tp[id].priority;
     pthread_attr_setschedparam(&myatt, &mypar);
     tret = pthread_create(&tid[id], &myatt, task, (void *)(&tp[id]));
-    return tret;
+
+    if (tret != 0) return PTASK_ERROR;
+
+    return id;
 }
 
 int ptask_id(void *arg)
