@@ -1,7 +1,7 @@
 CC		= gcc
 CFLAGS	= --std=c99 -g -Wall -pedantic
 INCLUDES= -I.
-LIBS	= -lsndfile -lfftw3 -lfftw3f -lm -lallegro -lallegro_main -lallegro_primitives -lpthread
+LIBS	= -lsndfile -lfftw3 -lfftw3f -lm -lallegro -lallegro_main -lallegro_image -lallegro_primitives -lpthread
 SRCS	= Sound2Image.c fft_audio.c ptask.c bqueue.c
 OBJS	= $(SRCS:.c=.o)
 MAIN	= Sound2Image
