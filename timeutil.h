@@ -7,7 +7,7 @@
 
 
 static inline void time_copy(struct timespec * td,
-                             struct timespec ts)
+                             const struct timespec ts)
 {
     td->tv_sec  = ts.tv_sec;
     td->tv_nsec = ts.tv_nsec;
