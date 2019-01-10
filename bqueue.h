@@ -19,8 +19,8 @@ typedef struct bqueue {
 
 
 int bqueue_create(BQueue * q);
-void bqueue_lock(BQueue * q);
-void bqueue_unlock(BQueue * q);
+int bqueue_lock(BQueue * q);
+int bqueue_unlock(BQueue * q);
 int bqueue_is_empty_unsafe(BQueue * q);
 int bqueue_is_empty(BQueue * q);
 int bqueue_enqueue(BQueue * q, void * data);

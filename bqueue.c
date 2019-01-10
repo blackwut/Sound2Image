@@ -1,11 +1,14 @@
 #include "bqueue.h"
+#include <stdio.h>
 #include <assert.h>
 #include <errno.h>
+#include "common.h"
 #include "timeutil.h"
 
 
 int bqueue_create(BQueue * q)
 {
+    int ret = 0;
     assert(q != NULL);
 
     for (size_t i = 0; i < QUEUE_SIZE; ++i) {
@@ -13,22 +16,31 @@ int bqueue_create(BQueue * q)
     }
     q->head = 0;
     q->tail = 0;
-    pthread_mutex_init(&(q->mux), NULL);
-    pthread_cond_init(&q->cond, NULL);
+    
+    ret = pthread_mutex_init(&(q->mux), NULL);
+    if (ret != 0) {
+        return ret;
+    }
+
+    ret = pthread_cond_init(&(q->cond), NULL);
+    if (ret != 0) {
+        pthread_mutex_destroy(&(q->mux));
+        return ret;
+    }
 
     return BQUEUE_SUCCESS;
 }
 
-void bqueue_lock(BQueue * q)
+int bqueue_lock(BQueue * q)
 {
     assert(q != NULL);
-    pthread_mutex_lock(&(q->mux));
+    return pthread_mutex_lock(&(q->mux));
 }
 
-void bqueue_unlock(BQueue * q)
+int bqueue_unlock(BQueue * q)
 {
     assert(q != NULL);
-    pthread_mutex_unlock(&(q->mux));
+    return pthread_mutex_unlock(&(q->mux));
 }
 
 int bqueue_is_empty_unsafe(BQueue * q)
@@ -38,8 +50,8 @@ int bqueue_is_empty_unsafe(BQueue * q)
 
 int bqueue_is_empty(BQueue * q)
 {
-    assert(q != NULL);
     int isEmpty;
+    assert(q != NULL);
 
     bqueue_lock(q);
     isEmpty = bqueue_is_empty_unsafe(q);
@@ -48,8 +60,7 @@ int bqueue_is_empty(BQueue * q)
     return isEmpty;
 }
 
-int bqueue_enqueue(BQueue * q,
-                    void * data)
+int bqueue_enqueue(BQueue * q, void * data)
 {
     assert(q != NULL);
 
@@ -57,7 +68,7 @@ int bqueue_enqueue(BQueue * q,
     assert(q->head <= QUEUE_SIZE);
     q->items[q->head] = data;
     if (bqueue_is_empty_unsafe(q))
-        pthread_cond_broadcast(&q->cond);
+        pthread_cond_broadcast(&(q->cond));
     q->head = q->head + 1;
     bqueue_unlock(q);
 
@@ -66,16 +77,15 @@ int bqueue_enqueue(BQueue * q,
 
 void * bqueue_dequeue(BQueue * q, const int timeout)
 {
-    assert(q != NULL);
     int ret = 0;
     struct timespec abstimeout;
     void * data = NULL;
 
+    assert(q != NULL);
+
     if (timeout > 0) {
-        int retval = clock_gettime(CLOCK_MONOTONIC, &abstimeout);
-        if (retval == 0) {
-            time_add_ms(&abstimeout, timeout);
-        }
+        clock_gettime(CLOCK_MONOTONIC, &abstimeout);
+        time_add_ms(&abstimeout, timeout);
     }
 
     bqueue_lock(q);
@@ -83,7 +93,8 @@ void * bqueue_dequeue(BQueue * q, const int timeout)
         if (timeout > 0) {
             ret = pthread_cond_timedwait(&q->cond, &q->mux, &abstimeout);
             if (ret == EINVAL) {
-                printf("ERROR in timeout format!\n");
+                DLOG("ERROR in abstimeout format", NULL);
+                exit(EXIT_BQUEUE_TIMEOUT_FORMAT);
             }
         } else {
             pthread_cond_wait(&q->cond, &q->mux);
@@ -92,7 +103,6 @@ void * bqueue_dequeue(BQueue * q, const int timeout)
 
     if (ret == ETIMEDOUT) {
         bqueue_unlock(q);
-        printf("TIMEOUT!\n");
         return NULL;
     }
 
