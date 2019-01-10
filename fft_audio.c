@@ -38,7 +38,7 @@ int fft_audio_init(const float * data,
     _data_size = data_size;
     _samplerate = samplerate;
     _bins_size = samplerate / 2 ;
-    _block_size = BEST_BLOCK_SIZE(block_size);
+    _block_size = block_size;//BEST_BLOCK_SIZE(block_size);
     _block_offset = 0;
     _plan = fftwf_plan_dft_1d(_block_size, _in, _out, FFTW_FORWARD, FFTW_ESTIMATE);
 
@@ -47,7 +47,13 @@ int fft_audio_init(const float * data,
 
 int fft_audio_next_block(fft_audio_block * block)
 {
-    if (_block_offset + _block_size > _data_size) return -1;
+    assert(block != NULL);
+
+    // printf("error fuck: (%d, %d) %d > %d\n", _block_offset, _block_size, (_block_offset + _block_size), _data_size);
+
+    if (_block_offset + _block_size > _data_size) {
+        return -1;
+    }
 
     for (size_t i = 0; i < _block_size; ++i) {
         _in[i][0] = _data[_block_offset + i];
@@ -73,37 +79,73 @@ int fft_audio_get_stats(fft_audio_stats * stats,
                         const size_t freq,
                         const size_t size)
 {
-    const size_t toFreq = freq + size;
-    assert(toFreq <= MAX_SAMPLERATE);
+    assert(stats != NULL);
+    assert(block != NULL);
+    assert(size <= block->size);
 
     const size_t fromSample = FREQ_TO_SAMPLE(freq);
-    const size_t toSample = FREQ_TO_SAMPLE(toFreq);
-    double min = DBL_MAX;
-    double max = DBL_MIN;
-    double power = 0;
-    double realSum = 0;
-    double imagSum = 0;
+    const size_t toSample = FREQ_TO_SAMPLE(freq + size);
+    float min          = DBL_MAX;
+    float max          = DBL_MIN;
+    float realSum      = 0;
+    float imagSum      = 0;
+    float power        = 0;
+    float amplitude    = 0;
+    float RMS          = 0;
+    float dB           = 0;
+    float phase        = 0;
 
     for (size_t i = fromSample; i < toSample; ++i) {
-        const float real = block->data[j][0];
-        const float imag = block->data[j][1];
+        const float real = block->data[i][0];
+        const float imag = block->data[i][1];
         const float val = real * real + imag * imag;
         const float mag = sqrtf(val);
 
         if (mag > max) max = mag;
         if (mag < min) min = mag;
-        power   += val;
         realSum += real;
         imagSum += imag;
+        power   += val;
     }
+
+    amplitude   = 2 * sqrtf(power) / _block_size;
+    RMS         = amplitude * (sqrt(2) / 2);
+    dB          = 20 * log10(amplitude);
+    phase       = atanf(imagSum / realSum);
+    power       = power * 2;
 
     stats->min          = min;
     stats->max          = max;
     stats->power        = power;
-    stats->amplitude    = 2 * sqrt(power) / _block_size;
-    stats->RMS          = amplitude * (sqrt(2) / 2);
-    stats->dB           = atanf(imagSum / realSum);
-    stats->phase        = 20 * log(stats->amplitude);
+    stats->amplitude    = amplitude;
+    stats->RMS          = RMS;
+    stats->dB           = dB;
+    stats->phase        = phase;
+
+    return FFT_AUDIO_SUCCESS;
+}
+
+int fft_audio_get_sub_block(fft_audio_block * sub_block,
+                            const fft_audio_block * block,
+                            const size_t freq,
+                            const size_t size)
+{
+    assert(sub_block != NULL);
+    assert(block != NULL);
+    assert(size <= block->size);
+
+    const size_t fromSample = FREQ_TO_SAMPLE(freq);
+    const size_t toSample = FREQ_TO_SAMPLE(freq + size);
+
+    // printf("freq: %zu\t toFreq: %zu\t fromSample: %zu\t toSample: %zu\n", freq, freq + size, fromSample, toSample);
+
+    for (size_t i = fromSample; i < toSample; ++i) {
+        sub_block->data[i][0] = block->data[i][0];
+        sub_block->data[i][1] = block->data[i][1];
+    }
+
+    sub_block->size = size;
+    fft_audio_get_stats(&(sub_block->stats), sub_block, freq, size);
 
     return FFT_AUDIO_SUCCESS;
 }

@@ -7,8 +7,8 @@
 #define FFT_AUDIO_SUCCESS 0
 
 #define MAX_SAMPLERATE  (44100)
-#define MAX_SECONDS     (10)
-#define MAX_BLOCK_SIZE   (MAX_SAMPLERATE * MAX_SECONDS)
+#define MAX_SECONDS     (5)
+#define MAX_BLOCK_SIZE  (MAX_SAMPLERATE * MAX_SECONDS)
 
 typedef struct fft_audio_stats {
     float min;
@@ -36,6 +36,10 @@ int fft_audio_get_stats(fft_audio_stats * stats,
                         const fft_audio_block * block,
                         const size_t freq,
                         const size_t size);
+int fft_audio_get_sub_block(fft_audio_block * sub_block,
+                            const fft_audio_block * block,
+                            const size_t freq,
+                            const size_t size);
 int fft_audio_free();
 
 #endif
