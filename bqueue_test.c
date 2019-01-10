@@ -40,10 +40,10 @@ void bqueue_test()
     bqueue_enqueue(&q, data_two);
     bqueue_enqueue(&q, data_three);
 
-    data_one = bqueue_dequeue(&q);
-    data_two = bqueue_dequeue(&q);
-    data_three = bqueue_dequeue(&q);
-    data_null = bqueue_dequeue(&q);
+    data_one = bqueue_dequeue(&q, 0);
+    data_two = bqueue_dequeue(&q, 0);
+    data_three = bqueue_dequeue(&q, 0);
+    data_null = bqueue_dequeue(&q, 0);
 
 
     printf("TEST: enqueue 3 items, dequeue 3 items\n");
@@ -55,12 +55,12 @@ void bqueue_test()
 
     printf("TEST: enqueue 1 item, dequeue 1 item, enqueue 2 items, dequeue 2 items\n");
     bqueue_enqueue(&q, data_one);
-    data_one = bqueue_dequeue(&q);
+    data_one = bqueue_dequeue(&q, 0);
     bqueue_enqueue(&q, data_two);
     bqueue_enqueue(&q, data_three);
-    data_two = bqueue_dequeue(&q);
-    data_three = bqueue_dequeue(&q);
-    data_null = bqueue_dequeue(&q);
+    data_two = bqueue_dequeue(&q, 0);
+    data_three = bqueue_dequeue(&q, 0);
+    data_null = bqueue_dequeue(&q, 0);
 
     printf("data_one: %d\n", (int)data_one);
     printf("data_two: %d\n", (int)data_two);
@@ -89,7 +89,7 @@ void * test_thread(void * arg)
             bqueue_enqueue(args->q, data);
         } else {
 
-            int * data = (int *)bqueue_dequeue(args->q);
+            int * data = (int *)bqueue_dequeue(args->q, 0);
             if (data != NULL) {
                 args->items[(int)*data]++;
                 free(data);
