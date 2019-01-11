@@ -21,6 +21,9 @@ do { PRINT_TO(stdout, fmt, __VA_ARGS__); } while (0)
 do { if (DEBUG) PRINT_TO(stderr, fmt, __VA_ARGS__); } while(0)
 
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
 static inline void check_malloc(const void * p, const char message[])
 {
     if (p != NULL) return;
