@@ -9,7 +9,7 @@ MAIN	= Sound2Image
 BQUEUE_TEST = bqueue_test
 
 
-all: $(MAIN)
+all: $(MAIN) $(BQUEUE_TEST)
 
 $(MAIN): $(OBJS)
 	$(CC) -o $@ $^ $(INCLUDES) $(LIBS) $(CFLAGS)
