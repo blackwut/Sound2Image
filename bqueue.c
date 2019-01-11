@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <errno.h>
 #include "common.h"
-#include "timeutil.h"
+#include "time_utils.h"
 
 
 int bqueue_create(BQueue * q)
