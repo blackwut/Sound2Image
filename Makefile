@@ -9,7 +9,7 @@ MAIN	= Sound2Image
 BQUEUE_TEST = bqueue_test
 
 
-all: $(MAIN) $(BQUEUE_TEST)
+all: $(MAIN)
 
 $(MAIN): $(OBJS)
 	$(CC) -o $@ $^ $(INCLUDES) $(LIBS) $(CFLAGS)
@@ -23,4 +23,4 @@ $(BQUEUE_TEST): $(BQUEUE_TEST).c bqueue.c
 
 .PHONY: clean
 clean:
-	$(RM) *.o *~ $(MAIN)
+	$(RM) *.o *~ $(MAIN) $(BQUEUE_TEST)
