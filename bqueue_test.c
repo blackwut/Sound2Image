@@ -43,7 +43,7 @@ void bqueue_test()
     data_one = bqueue_dequeue(&q, 0);
     data_two = bqueue_dequeue(&q, 0);
     data_three = bqueue_dequeue(&q, 0);
-    data_null = bqueue_dequeue(&q, 0);
+    data_null = bqueue_dequeue(&q, 1);
 
 
     printf("TEST: enqueue 3 items, dequeue 3 items\n");
@@ -60,7 +60,7 @@ void bqueue_test()
     bqueue_enqueue(&q, data_three);
     data_two = bqueue_dequeue(&q, 0);
     data_three = bqueue_dequeue(&q, 0);
-    data_null = bqueue_dequeue(&q, 0);
+    data_null = bqueue_dequeue(&q, 1);
 
     printf("data_one: %d\n", (int)data_one);
     printf("data_two: %d\n", (int)data_two);
