@@ -8,22 +8,19 @@
 #define FREQ_TO_SAMPLE(f) ((f) * (_block_size / (float)_samplerate))
 #define SAMPLE_TO_FREQ(s) ((s) * (_samplerate / (float)_block_size))
 
+
 const float * _data;
 size_t _data_size;
 size_t _samplerate;
 
-/* FFTW stuff */
 fftwf_plan _plan = NULL;
 fftwf_complex _in[MAX_BLOCK_SIZE];
 fftwf_complex _out[MAX_BLOCK_SIZE];
 
-/* block variables */
 size_t _block_size;
 size_t _block_offset;
-size_t _bins_size;
 
 
-/* Public functions */
 int fft_audio_init(const float * data,
                    const size_t data_size,
                    const size_t samplerate,
@@ -37,8 +34,7 @@ int fft_audio_init(const float * data,
     _data = data;
     _data_size = data_size;
     _samplerate = samplerate;
-    _bins_size = samplerate / 2 ;
-    _block_size = block_size;//BEST_BLOCK_SIZE(block_size);
+    _block_size = block_size;
     _block_offset = 0;
     _plan = fftwf_plan_dft_1d(_block_size, _in, _out, FFTW_FORWARD, FFTW_ESTIMATE);
 
@@ -49,10 +45,8 @@ int fft_audio_next_block(fft_audio_block * block)
 {
     assert(block != NULL);
 
-    // printf("error fuck: (%d, %d) %d > %d\n", _block_offset, _block_size, (_block_offset + _block_size), _data_size);
-
     if (_block_offset + _block_size > _data_size) {
-        return -1;
+        return FFT_AUDIO_OUT_OF_SIZE;
     }
 
     for (size_t i = 0; i < _block_size; ++i) {
@@ -137,8 +131,6 @@ int fft_audio_get_sub_block(fft_audio_block * sub_block,
     const size_t fromSample = FREQ_TO_SAMPLE(freq);
     const size_t toSample = FREQ_TO_SAMPLE(freq + size);
 
-    // printf("freq: %zu\t toFreq: %zu\t fromSample: %zu\t toSample: %zu\n", freq, freq + size, fromSample, toSample);
-
     for (size_t i = fromSample; i < toSample; ++i) {
         sub_block->data[i][0] = block->data[i][0];
         sub_block->data[i][1] = block->data[i][1];
@@ -151,6 +143,6 @@ int fft_audio_get_sub_block(fft_audio_block * sub_block,
 }
 
 int fft_audio_free() {
-    if (_plan) fftwf_destroy_plan(_plan); // TODO: check what fftwf_destroy_plan returns something
+    if (_plan) fftwf_destroy_plan(_plan);
     return FFT_AUDIO_SUCCESS;
 }

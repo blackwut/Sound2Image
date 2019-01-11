@@ -5,6 +5,7 @@
 #include <fftw3.h>
 
 #define FFT_AUDIO_SUCCESS 0
+#define FFT_AUDIO_OUT_OF_SIZE 1
 
 #define MAX_SAMPLERATE  (44100)
 #define MAX_SECONDS     (5)
