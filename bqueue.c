@@ -121,7 +121,10 @@ int bqueue_destroy(BQueue * q, void(*item_free)(void *))
 
     bqueue_lock(q);
     for (size_t i = q->tail; i < q->head; ++i) {
-        item_free(q->items[i]);
+        void * item = q->items[i];
+        if (item != BQUEUE_EOF){
+            item_free(q->items[i]);
+        }
     }
     bqueue_unlock(q);
 

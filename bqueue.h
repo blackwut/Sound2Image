@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#define BQUEUE_SUCCESS 0
+#define BQUEUE_SUCCESS  0
+#define BQUEUE_EOF      (void *)0xFFFFFFFF
 
 
 #define QUEUE_SIZE 512
