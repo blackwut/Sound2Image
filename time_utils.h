@@ -1,5 +1,5 @@
-#ifndef TIMEUTIL_H
-#define TIMEUTIL_H
+#ifndef TIME_UTILS_H
+#define TIME_UTILS_H
 
 #include <time.h>
 
