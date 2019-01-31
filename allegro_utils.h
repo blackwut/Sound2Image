@@ -1,41 +1,33 @@
 #ifndef ALLEGRO_UTIL_H
 #define ALLEGRO_UTIL_H
 
-
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_primitives.h>
-
-
-#define DISPLAY_W 800
-#define DISPLAY_H 600
-#define FRAMERATE 30
+#include "common.h"
 
 
 ALLEGRO_DISPLAY * display = NULL;
 ALLEGRO_EVENT_QUEUE * queue = NULL;
 
-void al_check(bool test, const char * description)
+static inline void al_check(bool test, const char * description)
 {
     if (test) return;
     fprintf(stderr, "ALLEGRO error in %s\n", description);
     exit(1);
 }
 
-void allegro_init()
+static inline void allegro_init()
 {
     al_check(al_init(), "al_init()");
     al_check(al_install_keyboard(), "al_install_keyboard()");
-
-    // timer = al_create_timer(ALLEGRO_BPS_TO_SECS(FRAMERATE));
-    // al_check(timer, "al_create_timer()");
 
     queue = al_create_event_queue();
     al_check(queue, "al_create_event_queue()");
 
     al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
     al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
-    al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR);
+    al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR | ALLEGRO_MEMORY_BITMAP | ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
     display = al_create_display(DISPLAY_W, DISPLAY_H);
     al_check(display, "al_create_display()");
 
@@ -44,11 +36,33 @@ void allegro_init()
 
     al_register_event_source(queue, al_get_keyboard_event_source());
     al_register_event_source(queue, al_get_display_event_source(display));
-    // al_register_event_source(queue, al_get_timer_event_source(timer));
 
-    al_clear_to_color(al_map_rgb(255, 255, 255));
+    al_clear_to_color(al_map_rgba(255, 255, 255, 255));
     al_flip_display();
-    // al_start_timer(timer);
+}
+
+static inline ALLEGRO_BITMAP * allegro_load_bitamp(const char localDirectory[], const char filename[])
+{
+    ALLEGRO_PATH * path = al_get_standard_path(ALLEGRO_RESOURCES_PATH);
+    al_append_path_component(path, localDirectory);
+    al_set_path_filename(path, filename);
+    DLOG("loaded bitmap: %s\n", al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP), NULL);
+    ALLEGRO_BITMAP * bitmap = al_load_bitmap(al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP));
+    al_destroy_path(path);
+    return bitmap;
+}
+
+static inline void allegro_lock_read(ALLEGRO_BITMAP * bitmap)
+{
+    ALLEGRO_LOCKED_REGION * region = al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_READONLY);
+    if (region == NULL) {
+        DLOG("allegro_lock_read: ERROR\n", NULL);
+    }
+}
+
+static inline void allegro_unlock(ALLEGRO_BITMAP * bitmap)
+{
+    al_unlock_bitmap(bitmap);
 }
 
 static inline int allegro_screenshot(const char * destination_path, const char * gamename)
@@ -131,7 +145,7 @@ static inline int allegro_screenshot(const char * destination_path, const char *
     return -6;
 }
 
-void allegro_free()
+static inline void allegro_free()
 {
     al_destroy_display(display);
     // al_destroy_timer(timer);
