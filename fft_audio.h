@@ -41,6 +41,9 @@ int fft_audio_get_sub_block(fft_audio_block * sub_block,
                             const fft_audio_block * block,
                             const size_t freq,
                             const size_t size);
+
+float magnitude_at_freq(fft_audio_block * block, size_t freq);
+
 int fft_audio_free();
 
 #endif

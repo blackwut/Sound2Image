@@ -142,6 +142,23 @@ int fft_audio_get_sub_block(fft_audio_block * sub_block,
     return FFT_AUDIO_SUCCESS;
 }
 
+float magnitude_at_freq(fft_audio_block * block, size_t freq)
+{
+    const size_t fromSample = FREQ_TO_SAMPLE(freq - 1) + 1;
+    const size_t toSample   = FREQ_TO_SAMPLE(freq);
+
+    float val = 0;
+    for (size_t i = fromSample; i < toSample; ++i) {
+        const float real = block->data[i][0];
+        const float imag = block->data[i][1];
+        val += real * real + imag * imag;
+    }
+
+    val = sqrtf(val);
+
+    return val;
+}
+
 int fft_audio_free() {
     if (_plan) fftwf_destroy_plan(_plan);
     return FFT_AUDIO_SUCCESS;
