@@ -4,6 +4,8 @@
 #include <time.h>
 
 #define TIME_GIGA (1000000000)
+#define TIME_SEC_TO_MSEC(t) ((t) * 1000)
+#define TIME_MSEC_TO_SEC(t) ((t) / 1000.0)
 
 
 static inline void time_copy(struct timespec * td,

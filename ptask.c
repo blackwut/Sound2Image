@@ -4,7 +4,7 @@
 #include <assert.h>
 #include "time_utils.h"
 
-#define MAX_TASKS (32)
+#define MAX_TASKS (64)
 
 
 struct task_par {
@@ -84,7 +84,7 @@ void ptask_wait_for_activation(const int id)
 {
     clock_nanosleep_abstime(&(tp[id].at));
     time_add_ms(&(tp[id].at), tp[id].period);
-    time_add_ms(&(tp[id].dl), tp[id].deadline);
+    time_add_ms(&(tp[id].dl), tp[id].deadline); //TODO: check if deadline is correct or period (slide 10 of page 4 of slides) is correct!
 }
 
 void ptask_wait_tasks()
