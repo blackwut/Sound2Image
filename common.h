@@ -6,6 +6,8 @@
 /**
     Constants
 */
+#define QUEUE_TIMEOUT           (5)
+
 #define DISPLAY_W               (800)
 #define DISPLAY_H               (600)
 #define FRAMERATE               (30)
@@ -13,7 +15,7 @@
 #define TASK_INPUT_PERIOD       (1000 / FRAMERATE)
 #define TASK_INPUT_DEADLINE     (1000 / FRAMERATE)
 #define TASK_INPUT_PRIORITY     (99)
-#define TASK_INPUT_QUEUE_TIME   (TASK_DISPLAY_PERIOD - 5)
+#define TASK_INPUT_QUEUE_TIME   (TASK_DISPLAY_PERIOD - QUEUE_TIMEOUT)
 
 
 #define TASK_DISPLAY_PERIOD     (1000 / FRAMERATE)
