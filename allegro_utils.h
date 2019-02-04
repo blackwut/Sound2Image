@@ -28,7 +28,7 @@ static inline void allegro_init()
     // Audio
     al_init_acodec_addon();
     al_check(al_install_audio(), "al_install_audio()");
-    al_check(al_reserve_samples(1), "al_reserve_samples()");
+    al_check(al_reserve_samples(0), "al_reserve_samples()");
 
     queue = al_create_event_queue();
     al_check(queue, "al_create_event_queue()");
