@@ -4,6 +4,9 @@
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_image.h>
 #include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_audio.h>
+#include <allegro5/allegro_acodec.h>
+
 #include "common.h"
 
 
@@ -21,6 +24,11 @@ static inline void allegro_init()
 {
     al_check(al_init(), "al_init()");
     al_check(al_install_keyboard(), "al_install_keyboard()");
+
+    // Audio
+    al_init_acodec_addon();
+    al_check(al_install_audio(), "al_install_audio()");
+    al_check(al_reserve_samples(1), "al_reserve_samples()");
 
     queue = al_create_event_queue();
     al_check(queue, "al_create_event_queue()");
@@ -147,6 +155,7 @@ static inline int allegro_screenshot(const char * destination_path, const char *
 
 static inline void allegro_free()
 {
+    al_uninstall_audio();
     al_destroy_display(display);
     // al_destroy_timer(timer);
     al_destroy_event_queue(queue);
