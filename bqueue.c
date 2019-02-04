@@ -69,7 +69,7 @@ int bqueue_enqueue(BQueue * q, void * data)
     q->items[q->head] = data;
     if (bqueue_is_empty_unsafe(q))
         pthread_cond_broadcast(&(q->cond));
-    q->head = q->head + 1;
+    q->head = (q->head + 1) % QUEUE_SIZE;
     bqueue_unlock(q);
 
     return BQUEUE_SUCCESS;
@@ -108,7 +108,7 @@ void * bqueue_dequeue(BQueue * q, const int timeout)
 
     if (q->tail < q->head) {
         data = q->items[q->tail];
-        q->tail = q->tail + 1;
+        q->tail = (q->tail + 1) % QUEUE_SIZE;
     }
     bqueue_unlock(q);
 

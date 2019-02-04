@@ -5,10 +5,10 @@
 #include <pthread.h>
 
 #define BQUEUE_SUCCESS  0
-#define BQUEUE_EOF      (void *)0xFFFFFFFF
+#define BQUEUE_EOF      (void *)0xFFFFFFFA
 
 
-#define QUEUE_SIZE 512
+#define QUEUE_SIZE 1024
 
 typedef struct bqueue {
     void * items[QUEUE_SIZE];
