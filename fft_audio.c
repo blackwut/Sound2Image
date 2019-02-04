@@ -4,9 +4,10 @@
 #include <assert.h>
 
 
-#define BEST_BLOCK_SIZE(b) (((b) > _samplerate ? (b) : (_samplerate) + 1))
-#define FREQ_TO_SAMPLE(f) ((f) * (_block_size / (float)_samplerate))
-#define SAMPLE_TO_FREQ(s) ((s) * (_samplerate / (float)_block_size))
+#define BEST_BLOCK_SIZE(b)  (((b) > _samplerate ? (b) : _samplerate + 1))
+#define MS_TO_FRAMES(ms)    ((ms) * _samplerate / 1000)
+#define FREQ_TO_SAMPLE(f)   ((f) * (_block_size / (float)_samplerate))
+#define SAMPLE_TO_FREQ(s)   ((s) * (_samplerate / (float)_block_size))
 
 
 const float * _data;
@@ -41,11 +42,11 @@ int fft_audio_init(const float * data,
     return FFT_AUDIO_SUCCESS;
 }
 
-int fft_audio_next_block(fft_audio_block * block)
+int fft_audio_block_shift_ms(fft_audio_block * block, const int shift_ms)
 {
     assert(block != NULL);
 
-    if (_block_offset + _block_size > _data_size) {
+    if (_block_offset + MS_TO_FRAMES(shift_ms) >= _data_size) {
         return FFT_AUDIO_OUT_OF_SIZE;
     }
 
@@ -53,7 +54,7 @@ int fft_audio_next_block(fft_audio_block * block)
         _in[i][0] = _data[_block_offset + i];
         _in[i][1] = 0.f;
     }
-    _block_offset += _block_size;
+    _block_offset += MS_TO_FRAMES(shift_ms);
 
     fftwf_execute(_plan);
 
@@ -66,6 +67,34 @@ int fft_audio_next_block(fft_audio_block * block)
     fft_audio_get_stats(&(block->stats), block, 0, _samplerate);
 
     return FFT_AUDIO_SUCCESS;
+}
+
+int fft_audio_next_block(fft_audio_block * block)
+{
+    return fft_audio_block_shift_ms(block, 1000);
+    // assert(block != NULL);
+
+    // if (_block_offset + _block_size > _data_size) {
+    //     return FFT_AUDIO_OUT_OF_SIZE;
+    // }
+
+    // for (size_t i = 0; i < _block_size; ++i) {
+    //     _in[i][0] = _data[_block_offset + i];
+    //     _in[i][1] = 0.f;
+    // }
+    // _block_offset += _block_size;
+
+    // fftwf_execute(_plan);
+
+    // block->size = _block_size;
+    // for (size_t i = 0; i < _block_size; ++i) {
+    //     block->data[i][0] = _out[i][0];
+    //     block->data[i][1] = _out[i][1];
+    // }
+
+    // fft_audio_get_stats(&(block->stats), block, 0, _samplerate);
+
+    // return FFT_AUDIO_SUCCESS;
 }
 
 int fft_audio_get_stats(fft_audio_stats * stats,

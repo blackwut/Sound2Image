@@ -32,6 +32,8 @@ int fft_audio_init(const float * data,
                    const size_t data_size,
                    const size_t samplerate,
                    const size_t block_size);
+int fft_audio_block_shift_ms(fft_audio_block * block,
+                             const int shift_ms);
 int fft_audio_next_block(fft_audio_block * block);
 int fft_audio_get_stats(fft_audio_stats * stats,
                         const fft_audio_block * block,
