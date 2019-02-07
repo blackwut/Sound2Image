@@ -106,10 +106,8 @@ void * bqueue_dequeue(BQueue * q, const int timeout)
         return NULL;
     }
 
-    if (q->tail < q->head) {
-        data = q->items[q->tail];
-        q->tail = (q->tail + 1) % QUEUE_SIZE;
-    }
+    data = q->items[q->tail];
+    q->tail = (q->tail + 1) % QUEUE_SIZE;
     bqueue_unlock(q);
 
     return data;
