@@ -62,7 +62,7 @@ int ptask_id(const void * arg)
 void ptask_activate(const int id)
 {
     struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
+    time_now(&now);
     time_copy(&(tp[id].at), now);
     time_copy(&(tp[id].dl), now);
     time_add_ms(&(tp[id].at), tp[id].period);
@@ -72,7 +72,7 @@ void ptask_activate(const int id)
 int ptask_deadline_miss(const int id)
 {
     struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
+    time_now(&now);
     if (time_cmp(now, tp[id].dl) > 0) {
         tp[id].deadline_miss++;
         return PTASK_DEADLINE_MISS;
@@ -82,7 +82,7 @@ int ptask_deadline_miss(const int id)
 
 void ptask_wait_for_activation(const int id)
 {
-    clock_nanosleep_abstime(&(tp[id].at));
+    time_nanosleep(&(tp[id].at));
     time_add_ms(&(tp[id].at), tp[id].period);
     time_add_ms(&(tp[id].dl), tp[id].deadline); //TODO: check if deadline is correct or period (slide 10 of page 4 of slides) is correct!
 }
