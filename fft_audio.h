@@ -8,8 +8,13 @@
 #define FFT_AUDIO_OUT_OF_SIZE 1
 
 #define MAX_SAMPLERATE  (44100)
-#define MAX_SECONDS     (5)
+#define MAX_SECONDS     (1)
 #define MAX_BLOCK_SIZE  (MAX_SAMPLERATE * MAX_SECONDS)
+
+#define FRAMES_TO_MS(f)     ((f) * 1000 / _samplerate)
+#define MS_TO_FRAMES(ms)    ((ms) * _samplerate / 1000)
+#define FREQ_TO_SAMPLE(f)   ((f) * (_block_size / (float)_samplerate))
+#define SAMPLE_TO_FREQ(s)   ((s) * (_samplerate / (float)_block_size))
 
 typedef struct fft_audio_stats {
     float min;

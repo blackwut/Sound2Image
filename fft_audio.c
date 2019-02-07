@@ -5,9 +5,6 @@
 
 
 #define BEST_BLOCK_SIZE(b)  (((b) > _samplerate ? (b) : _samplerate + 1))
-#define MS_TO_FRAMES(ms)    ((ms) * _samplerate / 1000)
-#define FREQ_TO_SAMPLE(f)   ((f) * (_block_size / (float)_samplerate))
-#define SAMPLE_TO_FREQ(s)   ((s) * (_samplerate / (float)_block_size))
 
 
 const float * _data;
@@ -72,29 +69,6 @@ int fft_audio_block_shift_ms(fft_audio_block * block, const int shift_ms)
 int fft_audio_next_block(fft_audio_block * block)
 {
     return fft_audio_block_shift_ms(block, 1000);
-    // assert(block != NULL);
-
-    // if (_block_offset + _block_size > _data_size) {
-    //     return FFT_AUDIO_OUT_OF_SIZE;
-    // }
-
-    // for (size_t i = 0; i < _block_size; ++i) {
-    //     _in[i][0] = _data[_block_offset + i];
-    //     _in[i][1] = 0.f;
-    // }
-    // _block_offset += _block_size;
-
-    // fftwf_execute(_plan);
-
-    // block->size = _block_size;
-    // for (size_t i = 0; i < _block_size; ++i) {
-    //     block->data[i][0] = _out[i][0];
-    //     block->data[i][1] = _out[i][1];
-    // }
-
-    // fft_audio_get_stats(&(block->stats), block, 0, _samplerate);
-
-    // return FFT_AUDIO_SUCCESS;
 }
 
 int fft_audio_get_stats(fft_audio_stats * stats,
@@ -108,8 +82,8 @@ int fft_audio_get_stats(fft_audio_stats * stats,
 
     const size_t fromSample = FREQ_TO_SAMPLE(freq);
     const size_t toSample = FREQ_TO_SAMPLE(freq + size);
-    float min          = DBL_MAX;
-    float max          = DBL_MIN;
+    float min          = FLT_MAX;
+    float max          = FLT_MIN;
     float realSum      = 0;
     float imagSum      = 0;
     float power        = 0;
