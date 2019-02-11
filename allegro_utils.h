@@ -177,8 +177,13 @@ static inline int allegro_screenshot(const char * destination_path, const char *
 
 static inline void allegro_free()
 {
+    al_uninstall_keyboard();
     al_uninstall_audio();
+    al_destroy_font(font);
     al_shutdown_ttf_addon();
+    al_shutdown_font_addon();
+    al_shutdown_image_addon();
+    al_shutdown_primitives_addon();
     al_destroy_display(display);
     al_destroy_event_queue(queue);
 }
