@@ -7,7 +7,7 @@
 #define BEST_BLOCK_SIZE(b)  (((b) > _samplerate ? (b) : _samplerate + 1))
 
 
-const float * _data;
+float * _data = NULL;
 size_t _data_size;
 size_t _samplerate;
 
@@ -19,7 +19,7 @@ size_t _block_size;
 size_t _block_offset;
 
 
-int fft_audio_init(const float * data,
+int fft_audio_init(float * data,
                    const size_t data_size,
                    const size_t samplerate,
                    const size_t block_size)
@@ -163,6 +163,7 @@ float magnitude_at_freq(fft_audio_block * block, size_t freq)
 }
 
 int fft_audio_free() {
+    if (_data) free(_data);
     if (_plan) fftwf_destroy_plan(_plan);
     return FFT_AUDIO_SUCCESS;
 }

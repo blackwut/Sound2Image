@@ -33,7 +33,7 @@ typedef struct fft_audio_block {
 } fft_audio_block;
 
 
-int fft_audio_init(const float * data,
+int fft_audio_init(float * data,
                    const size_t data_size,
                    const size_t samplerate,
                    const size_t block_size);
