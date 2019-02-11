@@ -39,6 +39,7 @@ int ptask_id(const void *arg);
 void ptask_activate(const int id);
 int ptask_deadline_miss(const int id);
 void ptask_wait_for_activation(const int id);
+void ptask_sleep_ms(const int ms);
 void ptask_wait_tasks();
 
 #endif

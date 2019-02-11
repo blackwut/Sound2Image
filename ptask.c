@@ -87,6 +87,14 @@ void ptask_wait_for_activation(const int id)
     time_add_ms(&(tp[id].dl), tp[id].deadline); //TODO: check if deadline is correct or period (slide 10 of page 4 of slides) is correct!
 }
 
+void ptask_sleep_ms(const int ms)
+{
+    struct timespec now;
+    time_now(&now);
+    time_add_ms(&now, ms);
+    time_nanosleep(&now);
+}
+
 void ptask_wait_tasks()
 {
     for (int i = 0; i < taskCount; ++i) {
