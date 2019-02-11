@@ -16,6 +16,7 @@ int bqueue_create(BQueue * q)
     }
     q->head = 0;
     q->tail = 0;
+    q->size = 0;
     
     ret = pthread_mutex_init(&(q->mux), NULL);
     if (ret != 0) {
@@ -45,7 +46,7 @@ int bqueue_unlock(BQueue * q)
 
 int bqueue_is_empty_unsafe(BQueue * q)
 {
-    return (q->head == q->tail);
+    return q->size == 0;//(q->head == q->tail);
 }
 
 int bqueue_is_empty(BQueue * q)
@@ -70,6 +71,8 @@ int bqueue_enqueue(BQueue * q, void * data)
     if (bqueue_is_empty_unsafe(q))
         pthread_cond_broadcast(&(q->cond));
     q->head = (q->head + 1) % QUEUE_SIZE;
+    q->size = q->size + 1;
+    assert(q->size < QUEUE_SIZE);
     bqueue_unlock(q);
 
     return BQUEUE_SUCCESS;
@@ -108,6 +111,8 @@ void * bqueue_dequeue(BQueue * q, const int timeout)
 
     data = q->items[q->tail];
     q->tail = (q->tail + 1) % QUEUE_SIZE;
+    q->size = q->size - 1;
+    assert(q->size >= 0);
     bqueue_unlock(q);
 
     return data;

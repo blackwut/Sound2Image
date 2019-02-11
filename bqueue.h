@@ -8,12 +8,13 @@
 #define BQUEUE_EOF      (void *)0xFFFFFFFA
 
 
-#define QUEUE_SIZE 128
+#define QUEUE_SIZE 1024
 
 typedef struct bqueue {
     void * items[QUEUE_SIZE];
     size_t head;
     size_t tail;
+    size_t size;
     pthread_mutex_t mux;
     pthread_cond_t cond;
 } BQueue;
