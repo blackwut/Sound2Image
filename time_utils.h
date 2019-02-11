@@ -1,6 +1,7 @@
 #ifndef TIME_UTILS_H
 #define TIME_UTILS_H
 
+#include <stdio.h>
 #include <time.h>
 
 #define TIME_MILLISEC   (1000)
@@ -88,7 +89,14 @@ static inline int time_nanosleep(const struct timespec * req)
 static inline void time_print_ms(const struct timespec * t, const char * message)
 {
     size_t ns = TIME_SEC_TO_NSEC(t->tv_sec) + t->tv_nsec;
-    printf("%s: \t%zu\n", message, ns);
+    size_t ms = (size_t)TIME_NSEC_TO_MSEC(ns) % 10000;
+    printf("%s: %zu ms\n", message, ms);
+}
+
+static inline void time_print_now_ms(const char * message) {
+    struct timespec t;
+    time_now(&t);
+    time_print_ms(&t, message);
 }
 
 #endif
