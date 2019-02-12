@@ -15,9 +15,11 @@
 #define BLUE(b)     (((b) * 13) % 255)
 #define ALPHA(a)    (((a) *  5) % 255)
 
-#define FRAGMENT_COUNT 4
+#define FRAGMENT_COUNT 2
 #define FRAGMENT_FREQ 44100
-#define FRAGMENT_SAMPLES (size_t) (FRAGMENT_FREQ / (float)TASK_FFT_PERIOD)
+#define FRAGMENT_SAMPLES 44100//(size_t) (FRAGMENT_FREQ / (float)TASK_FFT_PERIOD)
+
+#define DELAY 1000
 
 #define AUDIO_CHANNELS ALLEGRO_CHANNEL_CONF_2
 ALLEGRO_EVENT_QUEUE * streamQueue;
@@ -30,7 +32,7 @@ size_t audio_playing_time_ms = 0;
 
 #define DISSOLVENCE_EFFECT_RATE 0.2
 
-#define BUBBLE_TASKS 32
+#define BUBBLE_TASKS 30
 
 #define BUBBLE_THICKNESS     4
 #define BUBBLE_ALPHA_FILLED  200
@@ -123,16 +125,26 @@ void init_fft_audio(char infilename[])
         }
     }
 
-    for (int k = 0; k < frames; ++k) {
-        const float ss1 = data_play[k * 2];
-        const float ss2 = data_play[k * 2 + 1];
-        float s1 = ss1 * (float) 0x8000;
-        float s2 = ss2 * (float) 0x8000;
+    if (AUDIO_CHANNELS == ALLEGRO_CHANNEL_CONF_1) {
 
-        s1 = (s1 > 0x7FFF ? 0x7FFF : s1);
-        s2 = (s2 > 0x7FFF ? 0x7FFF : s2);
+        for (int k = 0; k < frames; ++k) {
+            const float ss1 = data_play[k];
+            data[k] = (ss1 > 0x7FFF ? 0x7FFF : ss1);
+        }
 
-        data[k] = (s1 + s2) / 2.f;
+    } else {
+
+        for (int k = 0; k < frames; ++k) {
+            const float ss1 = data_play[k * 2];
+            const float ss2 = data_play[k * 2 + 1];
+            float s1 = ss1 * (float) 0x8000;
+            float s2 = ss2 * (float) 0x8000;
+
+            s1 = (s1 > 0x7FFF ? 0x7FFF : s1);
+            s2 = (s2 > 0x7FFF ? 0x7FFF : s2);
+
+            data[k] = (s1 + s2) / 2.f;
+        }
     }
 
     printf("frames: %lld\tsecs: %lld\n", frames, frames / samplerate);
@@ -155,26 +167,43 @@ void * task_fft(void * arg)
     float * streamBuffer;
     fft_audio_block * audio_block;
     const size_t windowSize = (samplerate / 2) / BUBBLE_TASKS;
-    al_set_mixer_playing(al_get_default_mixer(), true);
+
+
+    // for (int k = al_get_available_audio_stream_fragments(stream); k > 0; --k) {
+    //     streamBuffer = al_get_audio_stream_fragment(stream);
+    //     if (streamBuffer != NULL) {
+    //         fill_fragment(streamBuffer);
+    //         al_check(al_set_audio_stream_fragment(stream, streamBuffer), "al_set_audio_stream_fragment");
+    //         float delay = FRAGMENT_COUNT * FRAGMENT_SAMPLES / (float)FRAGMENT_FREQ * 1000;
+    //         printf("delay: %f ms\n", delay);
+    //     }
+    // }
+
+    // al_set_mixer_playing(al_get_default_mixer(), true);
+    time_print_now_ms("start playing");
+    ptask_sleep_ms(DELAY);
 
     const int id = ptask_id(arg);
     ptask_activate(id);
 
     while (!DONE) {
 
-        al_wait_for_event_timed(streamQueue, &event, TIME_MSEC_TO_SEC(1));
-         if (event.type == ALLEGRO_EVENT_AUDIO_STREAM_FRAGMENT) {
-            streamBuffer = al_get_audio_stream_fragment(stream);
-            if (streamBuffer != NULL) {
-                fill_fragment(streamBuffer);
-                al_check(al_set_audio_stream_fragment(stream, streamBuffer), "al_set_audio_stream_fragment");
-                // float delay = FRAGMENT_COUNT * FRAGMENT_SAMPLES / (float)FRAGMENT_FREQ * 1000;
-                // printf("delay: %f ms\n", delay);
-            }
-        }
+        // al_wait_for_event_timed(streamQueue, &event, TIME_MSEC_TO_SEC(1));
+        //  if (event.type == ALLEGRO_EVENT_AUDIO_STREAM_FRAGMENT) {
+        //     streamBuffer = al_get_audio_stream_fragment(stream);
+        //     if (streamBuffer != NULL) {
+        //         fill_fragment(streamBuffer);
+        //         al_check(al_set_audio_stream_fragment(stream, streamBuffer), "al_set_audio_stream_fragment");
+        //         float delay = FRAGMENT_COUNT * FRAGMENT_SAMPLES / (float)FRAGMENT_FREQ * 1000;
+        //         // printf("delay: %f ms\n", delay);
+        //         time_print_now_ms("delay");
+        //     }
+        // }
 
         audio_block = (fft_audio_block *)calloc(1, sizeof(fft_audio_block));
         check_malloc(audio_block, "audio_block");
+
+        time_print_now_ms("new block");
 
         int ret = fft_audio_block_shift_ms(audio_block, TASK_FFT_PERIOD);
         if (ret != FFT_AUDIO_SUCCESS) {
@@ -219,6 +248,7 @@ void * task_bubble(void * arg)
     long dB;
     Bubble * bubble = &(bubbles[id]);
 
+    ptask_sleep_ms(DELAY);
     ptask_activate(id);
 
     while (!DONE) {
@@ -239,10 +269,11 @@ void * task_bubble(void * arg)
         RMS       = (long)audio_block->stats.RMS;
 
 
-        bubble->radius   = dB / 4;
+        bubble->radius   = 8;//dB / 4;
         bubble->x        = (id * (DISPLAY_W / BUBBLE_TASKS));
+        // printf("amplitude: %lld\n", amplitude);
         // bubble->y        = DISPLAY_H - (amplitude % DISPLAY_H);
-        bubble->y        = (DISPLAY_H - (dB / 90.f * DISPLAY_H));
+        bubble->y        = (DISPLAY_H - (dB / 360.f * DISPLAY_H));
 
         bubble->red      = RED(power);
         bubble->green    = GREEN(amplitude);
@@ -350,34 +381,30 @@ void * task_input(void * arg)
     return NULL;
 }
 
+void * task_play_sound(void * args)
+{
+    float * buf;
+    while (!DONE) {
+        ALLEGRO_EVENT event;
+        al_wait_for_event_timed(streamQueue, &event, TIME_MSEC_TO_SEC(5));
 
+        if (event.type == ALLEGRO_EVENT_AUDIO_STREAM_FRAGMENT) {
+            buf = al_get_audio_stream_fragment(stream);
+            if (!buf) {
+                continue;
+            }
 
-// void * task_play_sound(void * args)
-// {
-//     float * buf;
-//     while (!DONE) {
-//         ALLEGRO_EVENT event;
-//         al_wait_for_event_timed(streamQueue, &event, TIME_MSEC_TO_SEC(5));
+            fill_fragment(buf);
 
-//         if (event.type == ALLEGRO_EVENT_AUDIO_STREAM_FRAGMENT) {
-//             buf = al_get_audio_stream_fragment(stream);
-//             if (!buf) {
-//                 continue;
-//             }
+            al_check(al_set_audio_stream_fragment(stream, buf), "al_set_audio_stream_fragment");
+        }
+    }
 
-//             fill_fragment(buf);
+   al_drain_audio_stream(stream);
+   al_destroy_event_queue(streamQueue);
 
-//             al_check(al_set_audio_stream_fragment(stream, buf), "al_set_audio_stream_fragment");
-//             // float delay = FRAGMENT_COUNT * FRAGMENT_COUNT / (float)FRAGMENT_FREQ * 1000;
-//             // printf("delay: %f ms\n", delay);
-//         }
-//     }
-
-//    al_drain_audio_stream(stream);
-//    al_destroy_event_queue(queue);
-
-//    return NULL;
-// }
+   return NULL;
+}
 
 int main(int argc, char * argv[])
 {
@@ -413,22 +440,24 @@ int main(int argc, char * argv[])
         printf("Could not attach stream to mixer.\n");
         return 1;
     }
-    
+
     al_set_audio_stream_playmode(stream, ALLEGRO_PLAYMODE_ONCE);
     streamQueue = al_create_event_queue();
     al_register_event_source(streamQueue, al_get_audio_stream_event_source(stream));
-    al_set_mixer_playing(mixer, false);
-    // ptask_create(task_play_sound, 100, 100, TASK_FFT_PRIORITY);
+    // al_set_mixer_playing(mixer, false);
 
     // Queues
     for (int i = 0; i < BUBBLE_TASKS; ++i) {
-        bqueue_check(bqueue_create(audioQueue + i), "bqueue_create");
+        bqueue_check(bqueue_create(&(audioQueue[i])), "bqueue_create");
     }
 
     // Tasks
     for (int i = 0; i < BUBBLE_TASKS; ++i) {
         ptask_create(task_bubble, TASK_BUBBLE_PERIOD, TASK_BUBBLE_DEADLINE, TASK_BUBBLE_PRIORITY);
     }
+
+    ptask_create(task_play_sound, 100, 100, TASK_FFT_PRIORITY);
+
 
     ptask_create(task_fft,  TASK_FFT_PERIOD, TASK_FFT_DEADLINE , TASK_FFT_PRIORITY);
     ptask_create(task_display, TASK_DISPLAY_PERIOD, TASK_DISPLAY_DEADLINE, TASK_DISPLAY_PRIORITY);
@@ -441,6 +470,8 @@ int main(int argc, char * argv[])
     for (int i = 0; i < BUBBLE_TASKS; ++i) {
         bqueue_destroy(audioQueue + i, free);
     }
+
+    free(data_play);
 
     al_drain_audio_stream(stream);
     al_destroy_event_queue(streamQueue);
