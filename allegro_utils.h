@@ -11,13 +11,15 @@
 #include "common.h"
 
 #define FONT_NAME "font/modum.ttf"
-#define FONT_SIZE 24
+#define FONT_SIZE_BIG 20
+#define FONT_SIZE_SMALL 10
 
 
 ALLEGRO_DISPLAY * display = NULL;
 ALLEGRO_COLOR BACKGROUND_COLOR;
 
-ALLEGRO_FONT * font = NULL;
+ALLEGRO_FONT * font_big = NULL;
+ALLEGRO_FONT * font_small = NULL;
 ALLEGRO_COLOR font_color;
 ALLEGRO_EVENT_QUEUE * queue = NULL;
 
@@ -43,7 +45,7 @@ static inline void allegro_init()
     display = al_create_display(DISPLAY_W, DISPLAY_H);
     al_check(display, "al_create_display()");
     al_register_event_source(queue, al_get_display_event_source(display));
-    BACKGROUND_COLOR = al_map_rgba(0, 0, 0, 255);
+    BACKGROUND_COLOR = al_map_rgba(48, 48, 48, 255);
 
     // Input
     al_check(al_install_keyboard(), "al_install_keyboard()");
@@ -57,8 +59,9 @@ static inline void allegro_init()
     // Font
     al_check(al_init_font_addon(), "al_init_font_addon()");
     al_check(al_init_ttf_addon(), "al_init_ttf_addon()");
-    font = al_load_ttf_font(FONT_NAME, FONT_SIZE, 0);
-    font_color = al_map_rgba(255, 0, 0 , 255);
+    font_big = al_load_ttf_font(FONT_NAME, FONT_SIZE_BIG, 0);
+    font_small = al_load_ttf_font(FONT_NAME, FONT_SIZE_SMALL, 0);
+    font_color = al_map_rgba(41, 128, 185 , 255);
 
     // Image
     al_check(al_init_primitives_addon(), "al_init_primitives_addon()");
@@ -71,7 +74,12 @@ static inline void allegro_init()
 
 static inline void allegro_print_text(const char * text, const float x, const float y, const int align)
 {
-    al_draw_text(font, font_color, x, y, align, text);
+    al_draw_text(font_big, font_color, x, y, align, text);
+}
+
+static inline void allegro_print_text_small_color(const char * text, const ALLEGRO_COLOR c, const float x, const float y, const int align)
+{
+    al_draw_text(font_small, c, x, y, align, text);
 }
 
 static inline ALLEGRO_BITMAP * allegro_load_bitamp(const char localDirectory[], const char filename[])
@@ -102,7 +110,8 @@ static inline void allegro_free()
 {
     al_uninstall_keyboard();
     al_uninstall_audio();
-    al_destroy_font(font);
+    al_destroy_font(font_big);
+    al_destroy_font(font_small);
     al_shutdown_ttf_addon();
     al_shutdown_font_addon();
     al_shutdown_primitives_addon();
