@@ -2,7 +2,10 @@
 #include <pthread.h>
 #include <sched.h>
 #include <assert.h>
+#include "common.h"
 #include "time_utils.h"
+
+#define _GNU_SOURCE
 
 #define MAX_TASKS 64
 
@@ -49,7 +52,10 @@ int ptask_create(void * (*task_handler)(void *),
 	pthread_attr_setschedparam(&attributes, &sched);
 	ret = pthread_create(&tid[id], &attributes, task_handler, (void *)(&tp[id]));
 
-	if (ret != 0) return PTASK_ERROR;
+	if (ret != 0) {
+		DLOG("Error: pthread_create() with code: %d\n", ret);
+		return PTASK_ERROR;
+	}
 
 	return id;
 }
