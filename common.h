@@ -6,32 +6,42 @@
 /**
     Constants
 */
+#define FILENAME_SIZE           128
+#define BUBBLES_TEXT_SIZE       64
+#define TIMER_TEXT_SIZE         16
 #define QUEUE_TIMEOUT           (5)
 
-#define DISPLAY_W               (800)
-#define DISPLAY_H               (600)
-#define FRAMERATE               (30)
+#define DISPLAY_W               (768)
+#define DISPLAY_H               (480)
+#define DISPLAY_AUDIO_X         0
+#define DISPLAY_AUDIO_Y         64
+#define DISPLAY_AUDIO_W         DISPLAY_W
+#define DISPLAY_AUDIO_H         (DISPLAY_H - (DISPLAY_AUDIO_Y * 2))
+#define FRAMERATE               (50)
 
 #define TASK_INPUT_PERIOD       (1000 / FRAMERATE)
 #define TASK_INPUT_DEADLINE     (1000 / FRAMERATE)
-#define TASK_INPUT_PRIORITY     (99)
+#define TASK_INPUT_PRIORITY     (49)
 #define TASK_INPUT_QUEUE_TIME   (TASK_DISPLAY_PERIOD - QUEUE_TIMEOUT)
 
 
 #define TASK_DISPLAY_PERIOD     (1000 / FRAMERATE)
 #define TASK_DISPLAY_DEADLINE   (1000 / FRAMERATE)
-#define TASK_DISPLAY_PRIORITY   (99)
+#define TASK_DISPLAY_PRIORITY   (49)
 
 
 #define TASK_FFT_PERIOD         (1000 / FRAMERATE)
 #define TASK_FFT_DEADLINE       (1000 / FRAMERATE)
-#define TASK_FFT_PRIORITY       (49)
+#define TASK_FFT_PRIORITY       (99)
 
 #define TASK_BUBBLE_PERIOD       (1000 / FRAMERATE)
 #define TASK_BUBBLE_DEADLINE     (1000 / FRAMERATE)
-#define TASK_BUBBLE_PRIORITY     (49)
+#define TASK_BUBBLE_PRIORITY     (69)
 
 #define DEBUG 1
+
+#define EXIT_ALLEGRO_ERROR          1
+#define EXIT_FILENAME_NOT_FOUND     2
 
 #define EXIT_MALLOC                 1
 #define EXIT_OPEN_SF_FILE           2
@@ -51,12 +61,5 @@
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
-
-static inline void check_malloc(const void * p, const char message[])
-{
-    if (p != NULL) return;
-    DLOG("ERROR: malloc \"%s\"\n", message);
-    exit(EXIT_MALLOC);
-}
 
 #endif
