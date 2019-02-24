@@ -1,248 +1,195 @@
 #include "fft_audio.h"
 #include <stdlib.h>
-#include <sndfile.h>
 #include <float.h>
 #include <assert.h>
+#include <string.h>
+#include "common.h"
 
 
-// fftwf_plan plan = NULL;
-// fftwf_complex in[MAX_WINDOW_SIZE];
-
-// int fft_audio_init(fft_audio * audio,
-// 				   const char filename[],
-// 				   const size_t window_size)
-// {
-// 	SNDFILE * file;
-// 	SF_INFO info;
-// 	int i;
-
-// 	assert(audio != NULL);
-// 	assert(filename != NULL);
-
-// 	memset(&info, 0, sizeof(info));
-
-// 	file = sf_open(filename, SFM_READ, &info);
-
-// 	if (file == NULL) {
-// 		DLOG("Cannot open file %s\n", filename);
-// 		return FFT_AUDIO_ERROR_OPEN_FILE;
-// 	}
-
-// 	audio->file = file;
-
-// 	for (i = 0 ; i < MAX_DATA_SIZE; ++i) {
-// 		data[i] = 0.0f;
-// 	}
-
-// 	for (i = 0; i < MAX_WINDOW_SIZE; ++i) {
-// 		fft_data[i][0] = 0.0f;
-// 		fft_data[i][1] = 0.0f;
-// 	}
-
-// 	audio->samplerate	= info.channels;
-// 	audio->channels		= info.channels;
-// 	audio->frames		= info.frames;
-// 	audio->window_size	= window_size;
-
-// 	plan = fftwf_plan_dft_1d(window_size,
-// 							 in,
-// 							 audio->fft_data,
-// 							 FFTW_FORWARD,
-// 							 FFTW_ESTIMATE);
-
-// 	return FFT_AUDIO_SUCCESS;
-// }
-
-// int fft_audio_read_data(size_t data_size)
-// {
-// 	framesToRead = BUFFER_SIZE;
-// 	while ((readcount = sf_read_float(infile, buffer, framesToRead)) > 0) {
-// 		for (int k = 0; k < readcount; ++k) {
-// 			data_play[dataplayid++] = buffer[k];
-// 		}
-// 	}
-// }
-
-// int fft_audio_free(fft_audio * audio)
-// {
-// 	assert(audio != NULL);
-
-// 	if (audio->file != NULL) {
-// 		sf_close(audio->file);
-// 	}
-
-// 	if (plan != NULL){
-// 		fftwf_destroy_plan(plan);
-// 	}
-// }
+#define SILENCE_VALUE	((float)0x0000)
+#define NORM_VALUE		((float)0x8000)
 
 
-
-// int fft_audio_fft_at_ms(fft_audio * audio,
-// 						const size_t ms);
-
-
-
-#define BEST_BLOCK_SIZE(b)  (((b) > _samplerate ? (b) : _samplerate + 1))
-
-
-float * _data = NULL;
-size_t _data_size;
-size_t _samplerate;
-
-fftwf_plan _plan = NULL;
-fftwf_complex _in[MAX_BLOCK_SIZE];
-fftwf_complex _out[MAX_BLOCK_SIZE];
-
-size_t _block_size;
-size_t _block_offset;
-
-
-int fft_audio_init(float * data,
-				   const size_t data_size,
-				   const size_t samplerate,
-				   const size_t block_size)
+int fft_audio_init(fft_audio * audio,
+				   const char filename[],
+				   const size_t window_elements)
 {
-	assert(data != NULL);
-	assert(data_size > 0);
-	assert(samplerate <= MAX_SAMPLERATE);
-	assert(block_size <= MAX_BLOCK_SIZE);
+	size_t i;
+	SF_INFO info;
 
-	_data = data;
-	_data_size = data_size;
-	_samplerate = samplerate;
-	_block_size = block_size;
-	_block_offset = 0;
-	_plan = fftwf_plan_dft_1d(_block_size, _in, _out, FFTW_FORWARD, FFTW_ESTIMATE);
+	assert(audio != NULL);
+	assert(filename != NULL);
+	assert(window_elements <= MAX_WINDOW_ELEMENTS);
+
+	memset(&info, 0, sizeof(info));
+
+	audio->file = sf_open(filename, SFM_READ, &info);
+
+	if (audio->file == NULL) {
+		DLOG("Cannot open file %s\n", filename);
+		return FFT_AUDIO_ERROR_OPEN_FILE;
+	}
+
+	for (i = 0 ; i < MAX_DATA_ELEMENTS; ++i) {
+		audio->data[i] = SILENCE_VALUE;
+	}
+
+	for (i = 0; i < MAX_WINDOW_ELEMENTS; ++i) {
+		audio->fft_in[i][0] = SILENCE_VALUE;
+		audio->fft_in[i][1] = 0.0f;
+		audio->fft_out[i][0] = 0.0f;
+		audio->fft_out[i][1] = 0.0f;
+	}
+
+	audio->samplerate		= info.samplerate;
+	audio->channels			= info.channels;
+	audio->frames			= info.frames;
+	audio->window_elements	= window_elements;
+
+	audio->plan = fftwf_plan_dft_1d(window_elements,
+									audio->fft_in,
+									audio->fft_out,
+									FFTW_FORWARD,
+									FFTW_ESTIMATE);
 
 	return FFT_AUDIO_SUCCESS;
 }
 
-int fft_audio_block_shift_ms(fft_audio_block * block, const int shift_ms)
+int fft_audio_read_data(fft_audio * audio,
+						const size_t data_size)
 {
-	assert(block != NULL);
+	size_t readcount;
+	size_t i;
+	float aux;
 
-	if (_block_offset + MS_TO_FRAMES(shift_ms) >= _data_size) {
-		return FFT_AUDIO_ERROR_OUT_OF_SIZE;
+	assert(data_size * audio->channels <= MAX_DATA_ELEMENTS);
+
+	readcount = sf_read_float(audio->file, audio->data, data_size * audio->channels);
+	if (readcount == 0) {
+		DLOG("EOF", NULL);
+		return FFT_AUDIO_EOF;
 	}
 
-	for (size_t i = 0; i < _block_size; ++i) {
-		_in[i][0] = _data[_block_offset + i];
-		_in[i][1] = 0.f;
-	}
-	_block_offset += MS_TO_FRAMES(shift_ms);
-
-	fftwf_execute(_plan);
-
-	block->size = _block_size;
-	for (size_t i = 0; i < _block_size; ++i) {
-		block->data[i][0] = _out[i][0];
-		block->data[i][1] = _out[i][1];
+	if (audio->channels == 1) {
+		for (i = 0; i < readcount; ++i) {
+			audio->fft_in[i][0] = audio->data[i] * NORM_VALUE;
+		}
+	} else {
+		for (i = 0; i < readcount / 2; ++i) {
+			aux = audio->data[i * 2] + audio->data[i * 2 + 1];
+			audio->fft_in[i][0] = aux * NORM_VALUE;
+		}
 	}
 
-	fft_audio_get_stats(&(block->stats), block, 0, _block_size);
+	// Set all the remaining values to 0 if needed
+	for (i = readcount; i < data_size; ++i) {
+		audio->fft_in[i][0] = 0.0f;
+	}
 
 	return FFT_AUDIO_SUCCESS;
 }
 
-int fft_audio_next_block(fft_audio_block * block)
+int fft_audio_next_window(fft_audio * audio)
 {
-	return fft_audio_block_shift_ms(block, 1000);
+	int ret;
+
+	assert(audio != NULL);
+
+	ret = fft_audio_read_data(audio, audio->window_elements);
+	if (ret == FFT_AUDIO_EOF) {
+		return FFT_AUDIO_EOF;
+	}
+
+	fftwf_execute(audio->plan);
+	fft_audio_stats_freq(&(audio->stats), audio, 1, audio->samplerate);
+
+	return FFT_AUDIO_SUCCESS;
 }
 
-int fft_audio_get_stats(fft_audio_stats * stats,
-						const fft_audio_block * block,
-						const size_t freq,
-						const size_t size)
+int fft_audio_stats_samples(fft_audio_stats * stats,
+							const fft_audio * audio,
+							const size_t from_sample,
+							const size_t to_sample)
 {
+	size_t i;
+	size_t samples = to_sample - from_sample;
+
+	float real;
+	float imag;
+	float mag = 0.0f;
+	float magMin = FLT_MAX;
+	float magAvg = 0.0f;
+	float magMax = FLT_MIN;
+	float realSum = 0.0f;
+	float imagSum = 0.0f;
+
 	assert(stats != NULL);
-	assert(block != NULL);
-	assert(size <= block->size);
+	assert(audio != NULL);
+	assert(from_sample <= audio-> window_elements);
+	assert(to_sample <= audio->window_elements);
 
-	const size_t fromSample = FREQ_TO_SAMPLE(freq);
-	const size_t toSample = FREQ_TO_SAMPLE(freq + size);
-	float min          = FLT_MAX;
-	float max          = FLT_MIN;
-	float realSum      = 0;
-	float imagSum      = 0;
-	float power        = 0;
-	float amplitude    = 0;
-	float RMS          = 0;
-	float dB           = 0;
-	float phase        = 0;
+	for (i = from_sample; i < to_sample; ++i) {
+		real = audio->fft_out[i][0];
+		imag = audio->fft_out[i][1];
 
-	for (size_t i = fromSample; i < toSample; ++i) {
-		const float real = block->data[i][0];
-		const float imag = block->data[i][1];
-		const float val = real * real + imag * imag;
-		const float mag = sqrtf(val);
+		mag = real * real + imag * imag;
 
-		if (mag > max) max = mag;
-		if (mag < min) min = mag;
+		magMin = MIN(magMin, mag);
+		magAvg += mag;
+		magMax = MAX(magMax, mag);
+
 		realSum += real;
 		imagSum += imag;
-		power   += val;
 	}
 
-	amplitude   = 2 * sqrtf(power) / _block_size;
-	RMS         = amplitude * (sqrt(2) / 2);
-	dB          = 20 * log(amplitude);
-	phase       = atanf(imagSum / realSum);
-	power       = power * 2;
+	stats->magMin = magMin;
+	stats->magAvg = magAvg / samples;
+	stats->magMax = magMax;
 
-	stats->min          = min;
-	stats->max          = max;
-	stats->power        = power;
-	stats->amplitude    = amplitude;
-	stats->RMS          = RMS;
-	stats->dB           = dB;
-	stats->phase        = phase;
+	stats->realSum = realSum;
+	stats->imagSum = imagSum;
+	stats->amplitude = 2 * sqrtf(realSum * realSum + imagSum * imagSum) / samples;
+	stats->RMS = sqrtf(2) / 2.0f * stats->amplitude;
+	stats->dB = 20 * log10(stats->amplitude);
+	stats->phase = atanf(imagSum / realSum);
 
 	return FFT_AUDIO_SUCCESS;
 }
 
-int fft_audio_get_sub_block(fft_audio_block * sub_block,
-							const fft_audio_block * block,
-							const size_t freq,
-							const size_t size)
+// int fft_audio_stats_freq(fft_audio_stats * stats,
+// 						const fft_audio * audio,
+// 						const size_t from_freq,
+// 						const size_t to_freq)
+// {
+// 	assert(stats != NULL);
+// 	assert(audio != NULL);
+// 	assert(from_freq <= audio->samplerate);
+// 	assert(to_freq <= audio->samplerate);
+
+// 	size_t from_sample = FREQ_TO_SAMPLE(from_freq);
+// 	size_t to_sample = FREQ_TO_SAMPLE(to_freq);
+// 	size_t samples = to_sample - from_sample;
+
+// 	//TODO: find a better way to avoid this problem
+// 	// At least 1 sample to compute
+// 	if (to_sample <= from_sample) {
+// 		to_sample += 1;
+// 	}
+	
+// 	return fft_audio_stats_samples(stats, audio, from_sample, to_sample);
+// }
+
+int fft_audio_free(fft_audio * audio)
 {
-	assert(sub_block != NULL);
-	assert(block != NULL);
-	assert(size <= block->size);
+	assert(audio != NULL);
 
-	const size_t fromSample = FREQ_TO_SAMPLE(freq);
-	const size_t toSample = FREQ_TO_SAMPLE(freq + size);
-
-	for (size_t i = fromSample; i < toSample; ++i) {
-		sub_block->data[i][0] = block->data[i][0];
-		sub_block->data[i][1] = block->data[i][1];
+	if (audio->file != NULL) {
+		sf_close(audio->file);
 	}
 
-	sub_block->size = size;
-	fft_audio_get_stats(&(sub_block->stats), sub_block, freq, size);
-
-	return FFT_AUDIO_SUCCESS;
-}
-
-float magnitude_at_freq(fft_audio_block * block, size_t freq)
-{
-	const size_t fromSample = FREQ_TO_SAMPLE(freq - 1) + 1;
-	const size_t toSample   = FREQ_TO_SAMPLE(freq);
-
-	float val = 0;
-	for (size_t i = fromSample; i < toSample; ++i) {
-		const float real = block->data[i][0];
-		const float imag = block->data[i][1];
-		val += real * real + imag * imag;
+	if (audio->plan != NULL){
+		fftwf_destroy_plan(audio->plan);
 	}
 
-	val = sqrtf(val);
-
-	return val;
-}
-
-int fft_audio_free() {
-	if (_data) free(_data);
-	if (_plan) fftwf_destroy_plan(_plan);
 	return FFT_AUDIO_SUCCESS;
 }
