@@ -38,7 +38,7 @@
 #define BUBBLE_FILTER_PARAM 0.8
 
 
-#define DISSOLVENCE_EFFECT_RATE 0.2
+#define DISSOLVENCE_EFFECT_RATE 0.1
 
 #define BUBBLE_THICKNESS     2
 #define BUBBLE_ALPHA_FILLED  200
@@ -49,6 +49,34 @@
 #define BUBBLE_SCALE_MAX    2.0f
 #define BUBBLE_SCALE_STEP   0.1f
 
+unsigned char reds[32][3] = {0};
+
+// unsigned char reds[12][3] = {
+// 	{135,   0,   0},
+// 	{151,   6,   0},
+// 	{167,  12,   0},
+// 	{175,  20,   6},
+// 	{183,  28,  12},
+// 	{191,  36,  12},
+// 	{199,  44,  28},
+// 	{207,  52,  28},
+// 	{215,  60,  44},
+// 	{223,  68,  44},
+// 	{231,  76,  60},
+// 	{239,  84,  60},
+// 	{247,  92,  76},
+// 	{251, 100,  76},
+// 	{255, 108,  92},
+// 	{255, 116,  92},
+// 	{255, 124, 108},
+// 	{255, 132, 108},
+// 	{255, 140, 124},
+// 	{255, 156, 124},
+// 	{255, 172, 156},
+// 	{255, 188, 156},
+// 	{255, 204, 188}
+// 	{255, 220, 188}
+// };
 
 unsigned char colors[32][3] = {
 //Gray
@@ -146,7 +174,14 @@ Bubble bubbles[BUBBLE_TASKS_MAX]; //TODO: LOCK
 
 size_t bubble_tasks; //TODO: LOCK
 
-bool DONE; //TODO: LOCK
+int DONE; //TODO: LOCK
+
+#define GAIN_MIN 0
+#define GAIN_BASE 50
+#define GAIN_MAX 100
+#define GAIN_STEP 2
+
+size_t GAIN; //TODO: LOCK
 size_t audio_time_ms; //TODO: LOCK
 fft_audio audio; //TODO: LOCK
 fft_audio_stats audio_stats[BUBBLE_TASKS_MAX];
@@ -206,13 +241,13 @@ void * task_fft(void * arg)
 
 		ret = fft_audio_next_window(&audio);
 		if (ret == FFT_AUDIO_EOF) {
-			DONE = true;
+			DONE = 1;
 		}
 
 		audio_time_ms += TASK_FFT_PERIOD;
 
-		if (ptask_deadline_miss(id)) {
-			DLOG("%d) deadline missed!\n", id);
+		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
+			DLOG("%d) deadline missed! woet: %zu ms\n", id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
 	}
@@ -223,7 +258,6 @@ void * task_fft(void * arg)
 void * task_bubble(void * arg)
 {
 	const int id = ptask_id(arg);
-	size_t i;
 	size_t window_elements;
 	float bubble_spacing;
 	size_t from_sample = 0;
@@ -239,8 +273,15 @@ void * task_bubble(void * arg)
 
 		if (id < bubble_tasks) {
 
-			from_sample = pow(2, (log2(FRAGMENT_SIZE / 2) - 3.0) / bubble_tasks * id + 3.0);
-			to_sample = pow(2, (log2(FRAGMENT_SIZE / 2) - 3.0)/ bubble_tasks * (id + 1) + 3.0);
+			//TODO: check rounding and out of bound (if excedes FRAGMENT_SIZE / 2)
+			float step = log2f(FRAGMENT_SIZE / 2 - bubble_tasks) / (bubble_tasks + 1);
+			size_t from = lroundf(powf(2, (id + 1) * step)) + id + 1;
+			size_t to = lroundf(powf(2, (id + 2) * step)) + id + 2;
+
+			// from_sample = pow(2, (log2(FRAGMENT_SIZE / 2) - 0) / bubble_tasks * id + 0);
+			// to_sample = pow(2, (log2(FRAGMENT_SIZE / 2) - 0)/ bubble_tasks * (id + 1) + 0);
+			from_sample = from;
+			to_sample = to;
 
 			fft_audio_stats_samples(&(audio_stats[id]),
 									&audio,
@@ -258,17 +299,17 @@ void * task_bubble(void * arg)
 			bubbles[id].radius	= 8;
 			bubbles[id].x		= (id + 1) * bubble_spacing;
 			bubbles[id].y		= DISPLAY_AUDIO_Y + DISPLAY_AUDIO_H - y * DISPLAY_AUDIO_H;
-			bubbles[id].red		= colors[id % 200][0];
-			bubbles[id].green	= colors[id % 200][1];
-			bubbles[id].blue	= colors[id % 200][2];
+			bubbles[id].red		= colors[id % 32][0];
+			bubbles[id].green	= colors[id % 32][1];
+			bubbles[id].blue	= colors[id % 32][2];
 			bubbles[id].freq	= to_sample * FRAGMENT_SAMPLERATE / FRAGMENT_SIZE; //TODO: do something to avoid locks here
 
 		} else {
 			bubbles[id].radius = 0;
 		}
 
-		if (ptask_deadline_miss(id)) {
-			DLOG("%d) deadline missed!\n", id);
+		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
+			DLOG("%d) deadline missed! woet: %zu ms\n", id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
 	}
@@ -320,8 +361,8 @@ void * task_display(void * arg)
 						   USER_INFO_TEXT_ALIGN);
 		al_flip_display();
 
-		if (ptask_deadline_miss(id)) {
-			DLOG("(%d) deadline missed!\n", id, NULL);
+		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
+			DLOG("%d) deadline missed! woet: %zu ms\n", id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
 	}
@@ -331,63 +372,133 @@ void * task_display(void * arg)
 
 void * task_input(void * arg)
 {
-	const int id = ptask_id(arg);
 	ALLEGRO_EVENT event;
 	int keycode;
-
-	ptask_activate(id);
+	int keys[S2I_KEYS_ELEMENTS] = {0};
+	int gain_changed = 0;
 
 	while (!DONE) {
 		memset(&event, 0, sizeof(ALLEGRO_EVENT));
-		//TODO: verify TIME_MSEC_TO_SEC is still a float
-		al_wait_for_event_timed(queue, &event,
-								TIME_MSEC_TO_SEC((float)TASK_INPUT_QUEUE_TIME));
-		
-		switch(event.type) {
-			case ALLEGRO_EVENT_KEY_DOWN:
-				keycode = event.keyboard.keycode;
-				
-				if (keycode == ALLEGRO_KEY_ESCAPE) {
-					DONE = true;
-				}
+		al_wait_for_event(input_queue, &event);
 
-				if (keycode == ALLEGRO_KEY_UP) {
-					if (BUBBLE_SCALE < BUBBLE_SCALE_MAX) {
-						BUBBLE_SCALE += BUBBLE_SCALE_STEP;
-					}
-				}
+		if (keys[S2I_KEY_ESCAPE]) {
+			DONE = 1;
+		}
 
-				if (keycode == ALLEGRO_KEY_DOWN) {
-					if (BUBBLE_SCALE > BUBBLE_SCALE_MIN){
-						BUBBLE_SCALE -= BUBBLE_SCALE_STEP;
-					}
-				}
+		if (keys[S2I_KEY_UP]) {
+			if (BUBBLE_SCALE < BUBBLE_SCALE_MAX) {
+				BUBBLE_SCALE += BUBBLE_SCALE_STEP;
+			}
+		}
 
-				if (keycode == ALLEGRO_KEY_LEFT) {
-					if (bubble_tasks > BUBBLE_TASKS_MIN){
-						bubble_tasks--;
-					}
-				}
+		if (keys[S2I_KEY_DOWN]) {
+			if (BUBBLE_SCALE > BUBBLE_SCALE_MIN){
+				BUBBLE_SCALE -= BUBBLE_SCALE_STEP;
+			}
+		}
 
-				if (keycode == ALLEGRO_KEY_RIGHT) {
-					if (bubble_tasks < BUBBLE_TASKS_MAX){
-						bubble_tasks++;
-					}
-				}
+		if (keys[S2I_KEY_LEFT]) {
+			if (bubble_tasks > BUBBLE_TASKS_MIN){
+				bubble_tasks--;
+			}
+		}
+
+		if (keys[S2I_KEY_RIGHT]) {
+			if (bubble_tasks < BUBBLE_TASKS_MAX){
+				bubble_tasks++;
+			}
+		}
+
+		if (keys[S2I_KEY_PLUS]) {
+			if (GAIN < GAIN_MAX){
+				GAIN += GAIN_STEP;
+				gain_changed = 1;
+			}
+		}
+
+		if (keys[S2I_KEY_MINUS]) {
+			if (GAIN > GAIN_MIN){
+				GAIN -= GAIN_STEP;
+				gain_changed = 1;
+			}
+		}
+
+		if (gain_changed) {
+			al_check(al_set_audio_stream_gain(stream, GAIN / 100.0f),
+				 	 "al_set_audio_stream_gain()");
+			gain_changed = 0;
+		}
+
+		if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
+			keycode = event.keyboard.keycode;
+			switch (keycode) {
+				case ALLEGRO_KEY_ESCAPE:
+					keys[S2I_KEY_ESCAPE] = 1;
 				break;
 
-			case ALLEGRO_EVENT_DISPLAY_CLOSE:
-				DONE = true;
+				case ALLEGRO_KEY_UP:
+					keys[S2I_KEY_UP] = 1;
 				break;
 
+				case ALLEGRO_KEY_DOWN:
+					keys[S2I_KEY_DOWN] = 1;
+				break;
+
+				case ALLEGRO_KEY_LEFT:
+					keys[S2I_KEY_LEFT] = 1;
+				break;
+
+				case ALLEGRO_KEY_RIGHT:
+					keys[S2I_KEY_RIGHT] = 1;
+				break;
+
+				case 66: // plus sign //TODO: do it in a proper way
+					keys[S2I_KEY_PLUS] = 1;
+				break;
+
+				case 74: // minus sign //TODO: do it in a proper way 
+					keys[S2I_KEY_MINUS] = 1;
+				break;
+
+				default:
+					break;
+			}
+		}
+
+		if (event.type == ALLEGRO_EVENT_KEY_UP) {
+			keycode = event.keyboard.keycode;
+			switch (keycode) {
+				case ALLEGRO_KEY_ESCAPE:
+					keys[S2I_KEY_ESCAPE] = 0;
+				break;
+
+				case ALLEGRO_KEY_UP:
+					keys[S2I_KEY_UP] = 0;
+				break;
+
+				case ALLEGRO_KEY_DOWN:
+					keys[S2I_KEY_DOWN] = 0;
+				break;
+
+				case ALLEGRO_KEY_LEFT:
+					keys[S2I_KEY_LEFT] = 0;
+				break;
+
+				case ALLEGRO_KEY_RIGHT:
+					keys[S2I_KEY_RIGHT] = 0;
+				break;
+
+				case 66: // plus sign //TODO: do it in a proper way
+					keys[S2I_KEY_PLUS] = 0;
+				break;
+
+				case 74: // minus sign //TODO: do it in a proper way
+					keys[S2I_KEY_MINUS] = 0;
+				break;
 			default:
 				break;
+			}
 		}
-
-		if (ptask_deadline_miss(id)) {
-			DLOG("(%d) deadline missed!\n", id, NULL);
-		}
-		ptask_wait_for_activation(id);
 	}
 
 	return NULL;
@@ -405,16 +516,24 @@ void prepare_audio_stream()
 
 		ret = fft_audio_next_window(&audio);
 		if (ret == FFT_AUDIO_EOF) {
-			DONE = true;
+			DONE = 1;
 		}
 	}
 }
 
 int main(int argc, char * argv[])
 {
+
+	for (int i = 0; i < 32; ++i) {
+		reds[i][1] = 255 - (i > 2) * (i - 2) * 8;
+		reds[i][2] = i * 8;
+		reds[i][0] = (i > 2) * (i - 2) * 8;
+	}
+
 	char audio_filename[FILENAME_SIZE];
 
-	DONE = false;
+	DONE = 0;
+	GAIN = GAIN_BASE;
 	bubble_tasks = BUBBLE_TASKS_BASE;
 	audio_time_ms = 0;
 	memset(audio_filename, 0, FILENAME_SIZE);
@@ -430,7 +549,6 @@ int main(int argc, char * argv[])
 	al_set_target_bitmap(NULL);
 
 	mixer = al_get_default_mixer();
-	// al_set_mixer_playing(mixer, false);
 	stream = al_create_audio_stream(FRAGMENT_COUNT,
 									FRAGMENT_SIZE,
 									FRAGMENT_SAMPLERATE,
@@ -453,10 +571,11 @@ int main(int argc, char * argv[])
 				 TASK_FFT_PERIOD,
 				 TASK_FFT_DEADLINE,
 				 TASK_FFT_PRIORITY);
-	ptask_create(task_input,
-				 TASK_INPUT_PERIOD,
-				 TASK_INPUT_DEADLINE,
-				 TASK_INPUT_PRIORITY);
+	// ptask_create(task_input,
+	// 			 TASK_INPUT_PERIOD,
+	// 			 TASK_INPUT_DEADLINE,
+	// 			 TASK_INPUT_PRIORITY);
+	ptask_create(task_input, 0, 0, 0);
 	ptask_create(task_display,
 				 TASK_DISPLAY_PERIOD,
 				 TASK_DISPLAY_DEADLINE,
