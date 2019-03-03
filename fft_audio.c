@@ -101,7 +101,7 @@ int fft_audio_next_window(fft_audio * audio)
 	}
 
 	fftwf_execute(audio->plan);
-	fft_audio_stats_freq(&(audio->stats), audio, 1, audio->samplerate);
+	fft_audio_stats_samples(&(audio->stats), audio, 1, audio->window_elements);
 
 	return FFT_AUDIO_SUCCESS;
 }
