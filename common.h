@@ -9,20 +9,20 @@
 #define FILENAME_SIZE           128
 #define BUBBLES_TEXT_SIZE       64
 #define TIMER_TEXT_SIZE         16
-#define QUEUE_TIMEOUT           (5)
 
-#define DISPLAY_W               (768)
-#define DISPLAY_H               (480)
+#define DISPLAY_W               768
+#define DISPLAY_H               480
 #define DISPLAY_AUDIO_X         0
 #define DISPLAY_AUDIO_Y         64
 #define DISPLAY_AUDIO_W         DISPLAY_W
 #define DISPLAY_AUDIO_H         (DISPLAY_H - (DISPLAY_AUDIO_Y * 2))
 #define FRAMERATE               (50)
 
-#define TASK_INPUT_PERIOD       (1000 / FRAMERATE)
-#define TASK_INPUT_DEADLINE     (1000 / FRAMERATE)
-#define TASK_INPUT_PRIORITY     (49)
-#define TASK_INPUT_QUEUE_TIME   (TASK_DISPLAY_PERIOD - QUEUE_TIMEOUT)
+// #define INPUT_QUEUE_TIMEOUT     5
+// #define TASK_INPUT_PERIOD       50
+// #define TASK_INPUT_DEADLINE     50
+// #define TASK_INPUT_PRIORITY     (49)
+// #define TASK_INPUT_QUEUE_TIME   (TASK_INPUT_PERIOD - INPUT_QUEUE_TIMEOUT)
 
 
 #define TASK_DISPLAY_PERIOD     (1000 / FRAMERATE)
