@@ -40,7 +40,7 @@ static inline int time_cmp(const struct timespec t1,
 }
 
 static inline void time_add_ms(struct timespec * td,
-							   const int ms)
+							   const size_t ms)
 {
 	td->tv_sec += TIME_MSEC_TO_SEC(ms);
 	td->tv_nsec += (ms % TIME_MILLISEC) * TIME_MICROSEC;
@@ -51,10 +51,11 @@ static inline void time_add_ms(struct timespec * td,
 }
 
 static inline void time_diff(struct timespec * td,
-							 const struct timespec * ts)
+							 const struct timespec t1,
+							 const struct timespec t2)
 {
-	td->tv_sec = ts->tv_sec - td->tv_sec;
-	td->tv_nsec = ts->tv_nsec - td->tv_nsec;
+	td->tv_sec = t2.tv_sec - t1.tv_sec;
+	td->tv_nsec = t2.tv_nsec - t1.tv_nsec;
 	if (td->tv_sec < 0) {
 		td->tv_sec = 0;
 		td->tv_nsec = 0;
@@ -71,12 +72,13 @@ static inline void time_diff(struct timespec * td,
 
 #ifdef __MACH__
 /* emulate clock_nanosleep for CLOCK_MONOTONIC and TIMER_ABSTIME */
-static inline int time_nanosleep(const struct timespec * req)
+static inline int time_nanosleep(const struct timespec req)
 {
+	struct timespec now;
 	struct timespec diff;
-	int retval = time_now(&diff);
+	int retval = time_now(&now);
 	if (retval == 0) {
-		time_diff(&diff, req);
+		time_diff(&diff, now, req);
 		retval = nanosleep(&diff, NULL);
 	}
 	return retval;
@@ -84,20 +86,12 @@ static inline int time_nanosleep(const struct timespec * req)
 #else /* POSIX */
 	/* clock_nanosleep for CLOCK_MONOTONIC and TIMER_ABSTIME */
 	#define time_nanosleep(req) \
-		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, (req), NULL)
+		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &req, NULL)
 #endif
 
-static inline void time_print_ms(const struct timespec * t, const char * message)
-{
-	size_t ns = TIME_SEC_TO_NSEC(t->tv_sec) + t->tv_nsec;
-	size_t ms = TIME_NSEC_TO_MSEC(ns) % 10000;
-	printf("%s: %zu ms\n", message, ms);
-}
-
-static inline void time_print_now_ms(const char * message) {
-	struct timespec t;
-	time_now(&t);
-	time_print_ms(&t, message);
+static inline int time_get_ms(const struct timespec t) {
+	size_t ns = TIME_SEC_TO_NSEC(t.tv_sec) + t.tv_nsec;
+	return TIME_NSEC_TO_MSEC(ns);
 }
 
 #endif
