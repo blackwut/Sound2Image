@@ -21,8 +21,19 @@ ALLEGRO_COLOR BACKGROUND_COLOR;
 ALLEGRO_FONT * font_big = NULL;
 ALLEGRO_FONT * font_small = NULL;
 ALLEGRO_COLOR font_color;
-ALLEGRO_EVENT_QUEUE * queue = NULL;
+ALLEGRO_EVENT_QUEUE * input_queue = NULL;
 
+
+enum S2I_KEYS {
+    S2I_KEY_ESCAPE,
+    S2I_KEY_UP,
+    S2I_KEY_DOWN,
+    S2I_KEY_LEFT,
+    S2I_KEY_RIGHT,
+    S2I_KEY_PLUS,
+    S2I_KEY_MINUS,
+    S2I_KEYS_ELEMENTS
+};
 
 static inline void al_check(bool test, const char * description)
 {
@@ -35,21 +46,22 @@ static inline void allegro_init()
 {
     al_check(al_init(), "al_init()");
 
-    queue = al_create_event_queue();
-    al_check(queue, "al_create_event_queue()");
-
     // Display
     al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
     al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
     al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR | ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
     display = al_create_display(DISPLAY_W, DISPLAY_H);
     al_check(display, "al_create_display()");
-    al_register_event_source(queue, al_get_display_event_source(display));
     BACKGROUND_COLOR = al_map_rgba(48, 48, 48, 255);
 
-    // Input
+    // Keyboard
     al_check(al_install_keyboard(), "al_install_keyboard()");
-    al_register_event_source(queue, al_get_keyboard_event_source());
+
+    // Input queue
+    input_queue = al_create_event_queue();
+    al_check(input_queue, "al_create_event_queue()");
+    al_register_event_source(input_queue, al_get_display_event_source(display));
+    al_register_event_source(input_queue, al_get_keyboard_event_source());
 
     // Audio
     al_init_acodec_addon();
@@ -116,7 +128,7 @@ static inline void allegro_free()
     al_shutdown_font_addon();
     al_shutdown_primitives_addon();
     al_destroy_display(display);
-    al_destroy_event_queue(queue);
+    al_destroy_event_queue(input_queue);
 }
 
 #endif
