@@ -11,11 +11,12 @@
 
 
 struct task_par {
-	int id;					// task id
-	int period;				// period in ms
-	int deadline;			// relative deadline in ms
-	int priority;			// between 0 (low) and 99 (high)
-	int deadline_misses;	// number of misses
+	size_t id;					// task id
+	size_t period;				// period in ms
+	size_t deadline;			// relative deadline in ms
+	size_t priority;			// between 0 (low) and 99 (high)
+	struct timespec woet;	// Worst observed execution time
+	size_t deadline_misses;	// number of misses
 	struct timespec at;		// next activivation time
 	struct timespec dl;		// absolute deadline
 };
@@ -26,12 +27,12 @@ size_t task_count = 0;
 
 
 int ptask_create(void * (*task_handler)(void *),
-				 const int period,
-				 const int deadline,
-				 const int priority)
+				 const size_t period,
+				 const size_t deadline,
+				 const size_t priority)
 {
 	int ret;
-	int id;
+	size_t id;
 	pthread_attr_t attributes;
 	struct sched_param sched;
 
@@ -60,13 +61,13 @@ int ptask_create(void * (*task_handler)(void *),
 	return id;
 }
 
-int ptask_id(const void * arg)
+size_t ptask_id(const void * arg)
 {
 	struct task_par * tp = (struct task_par *)arg;
 	return tp->id;
 }
 
-void ptask_activate(const int id)
+void ptask_activate(const size_t id)
 {
 	struct timespec now;
 	time_now(&now);
@@ -76,10 +77,11 @@ void ptask_activate(const int id)
 	time_add_ms(&(tp[id].dl), tp[id].deadline);
 }
 
-int ptask_deadline_miss(const int id)
+int ptask_deadline_miss(const size_t id)
 {
 	struct timespec now;
 	time_now(&now);
+	time_diff(&(tp[id].woet), tp[id].at, now);
 	if (time_cmp(now, tp[id].dl) > 0) {
 		tp[id].deadline_misses++;
 		return PTASK_DEADLINE_MISS;
@@ -87,19 +89,24 @@ int ptask_deadline_miss(const int id)
 	return 0;
 }
 
-void ptask_wait_for_activation(const int id)
+void ptask_wait_for_activation(const size_t id)
 {
-	time_nanosleep(&(tp[id].at));
+	time_nanosleep(tp[id].at);
 	time_add_ms(&(tp[id].at), tp[id].period);
 	time_add_ms(&(tp[id].dl), tp[id].period);
 }
 
-void ptask_sleep_ms(const int ms)
+size_t ptask_get_woet_ms(const size_t id)
+{
+	return time_get_ms(tp[id].woet);
+}
+
+void ptask_sleep_ms(const size_t ms)
 {
 	struct timespec now;
 	time_now(&now);
 	time_add_ms(&now, ms);
-	time_nanosleep(&now);
+	time_nanosleep(now);
 }
 
 void ptask_wait_tasks()
