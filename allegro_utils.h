@@ -10,9 +10,11 @@
 
 #include "common.h"
 
+#define WINDOW_TITLE "Sound2Image - Alberto Ottimo ©"
+
 #define FONT_NAME "font/modum.ttf"
 #define FONT_SIZE_BIG 20
-#define FONT_SIZE_SMALL 10
+#define FONT_SIZE_SMALL 12
 
 
 ALLEGRO_DISPLAY * display = NULL;
@@ -46,13 +48,15 @@ static inline void allegro_init()
 {
     al_check(al_init(), "al_init()");
 
+    al_set_new_window_title(WINDOW_TITLE);
+
     // Display
     al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
     al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
     al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR | ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
     display = al_create_display(DISPLAY_W, DISPLAY_H);
     al_check(display, "al_create_display()");
-    BACKGROUND_COLOR = al_map_rgba(48, 48, 48, 255);
+    BACKGROUND_COLOR = al_map_rgba(32, 32, 32, 255);
 
     // Keyboard
     al_check(al_install_keyboard(), "al_install_keyboard()");
@@ -86,36 +90,14 @@ static inline void allegro_init()
 
 static inline void allegro_print_text(const char * text, const float x, const float y, const int align)
 {
+    al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
     al_draw_text(font_big, font_color, x, y, align, text);
 }
 
 static inline void allegro_print_text_small_color(const char * text, const ALLEGRO_COLOR c, const float x, const float y, const int align)
 {
+    al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
     al_draw_text(font_small, c, x, y, align, text);
-}
-
-static inline ALLEGRO_BITMAP * allegro_load_bitamp(const char localDirectory[], const char filename[])
-{
-    ALLEGRO_PATH * path = al_get_standard_path(ALLEGRO_RESOURCES_PATH);
-    al_append_path_component(path, localDirectory);
-    al_set_path_filename(path, filename);
-    DLOG("loaded bitmap: %s\n", al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP), NULL);
-    ALLEGRO_BITMAP * bitmap = al_load_bitmap(al_path_cstr(path, ALLEGRO_NATIVE_PATH_SEP));
-    al_destroy_path(path);
-    return bitmap;
-}
-
-static inline void allegro_lock_read(ALLEGRO_BITMAP * bitmap)
-{
-    ALLEGRO_LOCKED_REGION * region = al_lock_bitmap(bitmap, ALLEGRO_PIXEL_FORMAT_ANY, ALLEGRO_LOCK_READONLY);
-    if (region == NULL) {
-        DLOG("allegro_lock_read: ERROR\n", NULL);
-    }
-}
-
-static inline void allegro_unlock(ALLEGRO_BITMAP * bitmap)
-{
-    al_unlock_bitmap(bitmap);
 }
 
 static inline void allegro_free()

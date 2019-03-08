@@ -9,8 +9,9 @@
 #define FILENAME_SIZE           128
 #define BUBBLES_TEXT_SIZE       64
 #define TIMER_TEXT_SIZE         16
+#define GAIN_TEXT_SIZE          16
 
-#define DISPLAY_W               768
+#define DISPLAY_W               960
 #define DISPLAY_H               480
 #define DISPLAY_AUDIO_X         0
 #define DISPLAY_AUDIO_Y         64
@@ -47,6 +48,15 @@
 #define EXIT_OPEN_SF_FILE           2
 #define EXIT_CLOSE_SF_FILE          3
 #define EXIT_BQUEUE_TIMEOUT_FORMAT  4
+
+
+#define MUTEX_LOCK(lock) pthread_mutex_lock(&lock)
+#define MUTEX_UNLOCK(lock) pthread_mutex_unlock(&lock)
+
+#define EXP_LOCK(exp, lock) \
+    MUTEX_LOCK(lock); \
+    exp; \
+    MUTEX_UNLOCK(lock)
 
 
 #define PRINT_TO(file, fmt, ...)\
