@@ -15,10 +15,10 @@ struct task_par {
 	size_t period;				// period in ms
 	size_t deadline;			// relative deadline in ms
 	size_t priority;			// between 0 (low) and 99 (high)
-	struct timespec woet;	// Worst observed execution time
-	size_t deadline_misses;	// number of misses
-	struct timespec at;		// next activivation time
-	struct timespec dl;		// absolute deadline
+	struct timespec woet;		// worst observed execution time
+	size_t deadline_misses;		// number of misses
+	struct timespec at;			// next activivation time
+	struct timespec dl;			// absolute deadline
 };
 
 struct task_par tp[MAX_TASKS];
@@ -98,7 +98,7 @@ void ptask_wait_for_activation(const size_t id)
 
 size_t ptask_get_woet_ms(const size_t id)
 {
-	return time_get_ms(tp[id].woet);
+	return time_to_ms(tp[id].woet);
 }
 
 void ptask_sleep_ms(const size_t ms)
