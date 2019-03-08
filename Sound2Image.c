@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h> 
+#include <pthread.h>
+#include <semaphore.h>
 #include <math.h>
 #include "common.h"
 #include "fft_audio.h"
 #include "allegro_utils.h"
 #include "ptask.h"
 #include "time_utils.h"
+#include "bubble_trails.h"
 
 #define BUBBLES_INFO_TEXT_ALIGN ALLEGRO_ALIGN_LEFT
 #define BUBBLES_INFO_X 10
@@ -15,30 +18,26 @@
 #define TIMER_INFO_X DISPLAY_W - 10
 #define TIMER_INFO_Y 0
 
+#define GAIN_INFO_TEXT_ALIGN ALLEGRO_ALIGN_RIGHT
+#define GAIN_INFO_X DISPLAY_W - 10
+#define GAIN_INFO_Y 20
+
 #define USER_INFO_TEXT	"UP: bigger bubbles - DOWN: smaller bubbles - " \
 						"LEFT: less bubbles - RIGHT: more bubbles"
 #define USER_INFO_TEXT_ALIGN ALLEGRO_ALIGN_CENTER
 #define USER_INFO_X DISPLAY_W / 2
 #define USER_INFO_Y DISPLAY_H - 32
 
-
-#define RED(r)		(((long)(r) * 1) % 255)
-#define GREEN(g)	(((long)(g) * 1) % 255)
-#define BLUE(b)		(((long)(b) * 1) % 255)
-#define ALPHA(a)	(((long)(a) * 1) % 255)
-
 #define FRAGMENT_SAMPLERATE		44100
-#define FRAGMENT_COUNT			50
-#define FRAGMENT_SIZE			882 // Must be a diveder of both FRAGMENT_SAMPLERATE and FRAMERATE
+#define FRAGMENT_COUNT			8
+#define FRAGMENT_SIZE			882 // Must be a diveder of both FRAGMENT_SAMPLERATE and 1000/FRAMERATE
 #define FRAGMENT_DEPTH 			ALLEGRO_AUDIO_DEPTH_FLOAT32
 
 #define BUBBLE_TASKS_MIN 8
 #define BUBBLE_TASKS_BASE 24
 #define BUBBLE_TASKS_MAX 32
-#define BUBBLE_FILTER_PARAM 0.8
+#define BUBBLE_FILTER_PARAM 0.5
 
-
-#define DISSOLVENCE_EFFECT_RATE 0.1
 
 #define BUBBLE_THICKNESS     2
 #define BUBBLE_ALPHA_FILLED  200
@@ -49,41 +48,15 @@
 #define BUBBLE_SCALE_MAX    2.0f
 #define BUBBLE_SCALE_STEP   0.1f
 
-unsigned char reds[32][3] = {0};
-
-// unsigned char reds[12][3] = {
-// 	{135,   0,   0},
-// 	{151,   6,   0},
-// 	{167,  12,   0},
-// 	{175,  20,   6},
-// 	{183,  28,  12},
-// 	{191,  36,  12},
-// 	{199,  44,  28},
-// 	{207,  52,  28},
-// 	{215,  60,  44},
-// 	{223,  68,  44},
-// 	{231,  76,  60},
-// 	{239,  84,  60},
-// 	{247,  92,  76},
-// 	{251, 100,  76},
-// 	{255, 108,  92},
-// 	{255, 116,  92},
-// 	{255, 124, 108},
-// 	{255, 132, 108},
-// 	{255, 140, 124},
-// 	{255, 156, 124},
-// 	{255, 172, 156},
-// 	{255, 188, 156},
-// 	{255, 204, 188}
-// 	{255, 220, 188}
-// };
+pthread_mutex_t lock_bubble_scale;
+float BUBBLE_SCALE = BUBBLE_SCALE_BASE;
 
 unsigned char colors[32][3] = {
 //Gray
-{ 46,  64,  83},
-{ 52,  73,  94},
-{ 86, 101, 115},
 { 93, 109, 126},
+{ 86, 101, 115},
+{ 52,  73,  94},
+{ 46,  64,  83},
 // Blue
 { 36, 113, 163},
 { 41, 128, 185},
@@ -121,99 +94,70 @@ unsigned char colors[32][3] = {
 {142,  68, 173},
 };
 
-// unsigned char colors[32][3] = {
-// {169,  50,  38},
-// {192,  57,  43},
-// {203,  67,  53},
-// {231,  76,  60},
-// {136,  78, 160},
-// {155,  89, 182},
-// {125,  60, 152},
-// {142,  68, 173},
-// { 36, 113, 163},
-// { 41, 128, 185},
-// { 46, 134, 193},
-// { 52, 152, 219},
-// { 23, 165, 137},
-// { 26, 188, 156},
-// { 19, 141, 117},
-// { 22, 160, 133},
-// { 34, 153,  84},
-// { 39, 174,  96},
-// { 40, 180,  99},
-// { 46, 204, 113},
-// {212, 172,  13},
-// {241, 196,  15},
-// {214, 137,  16},
-// {243, 156,  18},
-// {202, 111,  30},
-// {230, 126,  34},
-// {186,  74,   0},
-// {211,  84,   0},
-// {112, 123, 124},
-// {127, 140, 141},
-// { 46,  64,  83},
-// { 52,  73,  94}
-// };
+pthread_cond_t cond_producer;
+pthread_cond_t cond_consumers;
+pthread_mutex_t lock_fft;
+int var_fft;
 
-float BUBBLE_SCALE = BUBBLE_SCALE_BASE; //TODO: LOCK
 
-typedef struct {
-	float x;
-	float y;
-	float radius;
+pthread_mutex_t lock_bubble_tasks;
+size_t bubble_tasks;
 
-	unsigned char red;
-	unsigned char green;
-	unsigned char blue;
-
-	size_t freq;
-} Bubble;
-
-Bubble bubbles[BUBBLE_TASKS_MAX]; //TODO: LOCK
-
-size_t bubble_tasks; //TODO: LOCK
-
-int DONE; //TODO: LOCK
+pthread_mutex_t lock_done;
+int DONE;
 
 #define GAIN_MIN 0
 #define GAIN_BASE 50
 #define GAIN_MAX 100
-#define GAIN_STEP 2
+#define GAIN_STEP 1
 
-size_t GAIN; //TODO: LOCK
-size_t audio_time_ms; //TODO: LOCK
+pthread_mutex_t lock_gain;
+size_t GAIN;
+
+pthread_mutex_t lock_audio_time_ms;
+size_t audio_time_ms;
+
 fft_audio audio; //TODO: LOCK
 fft_audio_stats audio_stats[BUBBLE_TASKS_MAX];
 
 ALLEGRO_AUDIO_STREAM * stream;
 ALLEGRO_MIXER * mixer;
 
-void draw_bubble(Bubble * b)
+void draw_bubble(Bubble b, float alpha) //TODO: separate draw of bubbles from draw of text. This can be done removing RGB and freq from bubble struct
 {
-	const float radius		= b->radius * BUBBLE_SCALE;
-	const float x			= (radius == 0 ? -radius : b->x);
-	const float y			= (radius == 0 ? -radius : b->y);
-	const float thickness	= BUBBLE_THICKNESS * BUBBLE_SCALE;
+	float bubble_scale_local;
+
+	EXP_LOCK(bubble_scale_local = BUBBLE_SCALE, lock_bubble_scale);
+
+	const float radius	= b.radius * bubble_scale_local;
+	const float x		= (radius == 0 ? -radius : b.x);
+	const float y		= (radius == 0 ? -radius : b.y);
 	char buffer[8];
 
-	ALLEGRO_COLOR color_filled = al_map_rgba(b->red, 
-											b->green,
-											b->blue,
-											BUBBLE_ALPHA_FILLED);
-	ALLEGRO_COLOR color = al_map_rgba(b->red,
-									b->green,
-									b->blue,
-									BUBBLE_ALPHA);
+	ALLEGRO_COLOR color_font = al_map_rgba(b.red,
+										   b.green,
+										   b.blue,
+										   255);
+	ALLEGRO_COLOR color_filled = al_map_rgba(b.red,
+											 b.green,
+											 b.blue,
+											 BUBBLE_ALPHA_FILLED * alpha);
+	ALLEGRO_COLOR color_circle = al_map_rgba(b.red,
+											 b.green,
+											 b.blue,
+											 BUBBLE_ALPHA * alpha);
 
-	snprintf(buffer, 8, "%zu", b->freq);
+	snprintf(buffer, 8, "%zu", b.freq);
 
+	al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
 	al_draw_filled_circle(x, y, radius, color_filled);
-	al_draw_circle(x, y, radius, color, thickness);
-	allegro_print_text_small_color(buffer, color, x, DISPLAY_AUDIO_H + DISPLAY_AUDIO_Y + 20 , ALLEGRO_ALIGN_CENTER);
+	al_draw_circle(x, y, radius, color_circle, 1.0f);
+	allegro_print_text_small_color(buffer, color_font,
+								   x, DISPLAY_AUDIO_H + DISPLAY_AUDIO_Y + 20,
+								   ALLEGRO_ALIGN_CENTER);
 }
 
-void try_fill_stream_fragment()
+void fill_stream_fragment()
 {
 	size_t i;
 	float * buffer = NULL;
@@ -230,21 +174,33 @@ void try_fill_stream_fragment()
 	}
 }
 
-void * task_fft(void * arg)
+void * task_fft(void * arg) //TODO: implement syncrhonization between task_fft and task_bubble
 {
 	const int id = ptask_id(arg);
+	int done_local = 0;
 	int ret;
 	ptask_activate(id);
 
-	while (!DONE) {
-		try_fill_stream_fragment();
+	while (!done_local) {
+
+		MUTEX_LOCK(lock_fft);
+		while (var_fft > 0) {
+			pthread_cond_wait(&cond_producer, &lock_fft);
+		}
+
+		fill_stream_fragment();
 
 		ret = fft_audio_next_window(&audio);
 		if (ret == FFT_AUDIO_EOF) {
-			DONE = 1;
+			EXP_LOCK(DONE += 1, lock_done);
 		}
 
-		audio_time_ms += TASK_FFT_PERIOD;
+		var_fft = BUBBLE_TASKS_MAX;
+		pthread_cond_broadcast(&cond_consumers);
+		MUTEX_UNLOCK(lock_fft);
+
+		EXP_LOCK(audio_time_ms += TASK_FFT_PERIOD, lock_audio_time_ms);
+		EXP_LOCK(done_local = DONE, lock_done);
 
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
 			DLOG("%d) deadline missed! woet: %zu ms\n", id, ptask_get_woet_ms(id));
@@ -258,55 +214,89 @@ void * task_fft(void * arg)
 void * task_bubble(void * arg)
 {
 	const int id = ptask_id(arg);
-	size_t window_elements;
+	int done_local = 0;
 	float bubble_spacing;
 	size_t from_sample = 0;
 	size_t to_sample = 0;
 	float y = 0.0f;
+	size_t bubble_tasks_local;
+
+	Bubble bubble;
 
 	ptask_activate(id);
 
-	while (!DONE) {
+	while (!done_local) {
 
-		bubble_spacing	= ((float)DISPLAY_W / (float)(bubble_tasks + 1));
-		window_elements	= FRAGMENT_SAMPLERATE / 2 / bubble_tasks; // TODO: avoid to read audio
+		EXP_LOCK(bubble_tasks_local = bubble_tasks, lock_bubble_tasks);
 
-		if (id < bubble_tasks) {
+		MUTEX_LOCK(lock_fft);
+		while (var_fft == 0) {
+			pthread_cond_wait(&cond_consumers, &lock_fft);
+		}
 
+		if (id < bubble_tasks_local) {
 			//TODO: check rounding and out of bound (if excedes FRAGMENT_SIZE / 2)
-			float step = log2f(FRAGMENT_SIZE / 2 - bubble_tasks) / (bubble_tasks + 1);
+			float step = log2f(FRAGMENT_SIZE / 2 - bubble_tasks_local) / (bubble_tasks_local + 1);
 			size_t from = lroundf(powf(2, (id + 1) * step)) + id + 1;
 			size_t to = lroundf(powf(2, (id + 2) * step)) + id + 2;
-
-			// from_sample = pow(2, (log2(FRAGMENT_SIZE / 2) - 0) / bubble_tasks * id + 0);
-			// to_sample = pow(2, (log2(FRAGMENT_SIZE / 2) - 0)/ bubble_tasks * (id + 1) + 0);
 			from_sample = from;
 			to_sample = to;
-
 			fft_audio_stats_samples(&(audio_stats[id]),
 									&audio,
 									from_sample,
 									to_sample);
 
-			float dbMin = 10 * logf(audio.stats.magMin);
-			float dbMax = 10 * logf(audio.stats.magMax);
-			float dbVal = 10 * logf(audio_stats[id].magMax);
+			bubble_spacing	= ((float)DISPLAY_W / (float)(bubble_tasks_local + 1));
 
-			if (isfinite(dbVal) && isfinite(dbMin) && isfinite(dbMax)){
-				y = y * BUBBLE_FILTER_PARAM + (1.0 - BUBBLE_FILTER_PARAM) * (dbVal - dbMin) / (dbMax - dbMin);
+
+			float audioMagMax = audio.stats.magMax;
+			float audioMagMin = audio.stats.magMin;
+
+			float windowMagMax = audio_stats[id].magMax;
+
+
+			float audiodBMax = 20 * log2f(audioMagMax);
+			float audiodBMin = 20 * log2f(audioMagMin);
+
+			float windowdBMax = 20 * log2f(windowMagMax);
+
+			float value = (windowdBMax - audiodBMin) / (audiodBMax - audiodBMin);
+
+			if (isfinite(value)) {
+				y = y * BUBBLE_FILTER_PARAM + (1.0f - BUBBLE_FILTER_PARAM) * value;
 			}
 
-			bubbles[id].radius	= 8;
-			bubbles[id].x		= (id + 1) * bubble_spacing;
-			bubbles[id].y		= DISPLAY_AUDIO_Y + DISPLAY_AUDIO_H - y * DISPLAY_AUDIO_H;
-			bubbles[id].red		= colors[id % 32][0];
-			bubbles[id].green	= colors[id % 32][1];
-			bubbles[id].blue	= colors[id % 32][2];
-			bubbles[id].freq	= to_sample * FRAGMENT_SAMPLERATE / FRAGMENT_SIZE; //TODO: do something to avoid locks here
+			// //y = audio_stats[id].dB / 150.f;
+			// if (isfinite(audio_stats[id].dB)) {
+			// 	y = y * BUBBLE_FILTER_PARAM + (1.0f - BUBBLE_FILTER_PARAM) * audio_stats[id].dB / 150.f;
+			// }
+
+			bubble.radius	= 8;
+			bubble.x		= (id + 1) * bubble_spacing;
+			bubble.y		= DISPLAY_AUDIO_Y + DISPLAY_AUDIO_H - y * DISPLAY_AUDIO_H;
+			bubble.red		= colors[id % 32][0];
+			bubble.green	= colors[id % 32][1];
+			bubble.blue		= colors[id % 32][2];
+			bubble.freq		= to_sample * FRAGMENT_SAMPLERATE / FRAGMENT_SIZE;
 
 		} else {
-			bubbles[id].radius = 0;
+			bubble.radius	= 0;
+			bubble.x		= 0;
+			bubble.y		= 0;
+			bubble.red		= 0;
+			bubble.green	= 0;
+			bubble.blue		= 0;
+			bubble.freq		= 0;
 		}
+		BubbleTrails_put(id, bubble);
+
+		var_fft--;
+		if (var_fft == 0) {
+			pthread_cond_signal(&cond_producer);
+		}
+		MUTEX_UNLOCK(lock_fft);
+
+		EXP_LOCK(done_local = DONE, lock_done);
 
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
 			DLOG("%d) deadline missed! woet: %zu ms\n", id, ptask_get_woet_ms(id));
@@ -321,35 +311,56 @@ void * task_bubble(void * arg)
 void * task_display(void * arg)
 {
 	const int id = ptask_id(arg);
+	int done_local = 0;
+	Bubble b;
+	size_t top;
+	float alpha;
 	size_t i;
+	size_t j;
+	size_t audio_time_ms_local;
 	size_t minutes;
 	size_t seconds;
 	size_t milliseconds;
 	char bubbles_text[BUBBLES_TEXT_SIZE];
 	char timer_text[TIMER_TEXT_SIZE];
+	char gain_text[GAIN_TEXT_SIZE];
+	size_t gain_local;
+	size_t bubble_tasks_local;
 
 	memset(timer_text, 0, TIMER_TEXT_SIZE);
 	al_set_target_backbuffer(display);
-	al_clear_to_color(BACKGROUND_COLOR);
-	al_flip_display();
 
 	ptask_activate(id);
 
-	while (!DONE) {
-		// Blur Effect
-		al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
-		al_draw_filled_rectangle(0, 0, DISPLAY_W, DISPLAY_H, al_map_rgba_f(16/255.f, 16/255.f, 16/255.f, DISSOLVENCE_EFFECT_RATE));
+	while (!done_local) {
+		al_clear_to_color(BACKGROUND_COLOR);
 
-		al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
-		for (i = 0; i < bubble_tasks; ++i) {
-			draw_bubble(&(bubbles[i]));
+		EXP_LOCK(bubble_tasks_local = bubble_tasks, lock_bubble_tasks);
+
+		for (i = 0; i < bubble_tasks_local; ++i) {
+			
+			BubbleTrails_lock(i);
+			top = BubbleTrails_top_unsafe(i);
+
+			for (j = 0; j < MAX_BUBBLES_IN_TRAIL; ++j) {
+				top = NEXT_BUBBLE(top);
+				b = BubbleTrails_get_bubble(i, top);
+				alpha = (MAX_BUBBLES_IN_TRAIL - j) / (float)MAX_BUBBLES_IN_TRAIL;
+				draw_bubble(b, alpha);
+			}
+
+			BubbleTrails_unlock(i);
 		}
 
-		minutes = TIME_MSEC_TO_SEC(audio_time_ms) / 60;
-		seconds = TIME_MSEC_TO_SEC(audio_time_ms) % 60;
-		milliseconds = audio_time_ms % TIME_MILLISEC;
-		snprintf(bubbles_text, BUBBLES_TEXT_SIZE, "Bubbles: %zu", bubble_tasks);
+		EXP_LOCK(audio_time_ms_local = audio_time_ms, lock_audio_time_ms);
+		EXP_LOCK(gain_local = GAIN, lock_gain);
+
+		minutes = TIME_MSEC_TO_SEC(audio_time_ms_local) / 60;
+		seconds = TIME_MSEC_TO_SEC(audio_time_ms_local) % 60;
+		milliseconds = audio_time_ms_local % TIME_MILLISEC;
+		snprintf(bubbles_text, BUBBLES_TEXT_SIZE, "Bubbles: %zu", bubble_tasks_local);
 		snprintf(timer_text, TIMER_TEXT_SIZE, "%02zu:%02zu:%03zu", minutes, seconds, milliseconds);
+		snprintf(gain_text, GAIN_TEXT_SIZE, "Vol:%3zu", gain_local);
 		allegro_print_text(bubbles_text,
 						   BUBBLES_INFO_X, BUBBLES_INFO_Y,
 						   BUBBLES_INFO_TEXT_ALIGN);
@@ -359,7 +370,13 @@ void * task_display(void * arg)
 		allegro_print_text(USER_INFO_TEXT,
 						   USER_INFO_X, USER_INFO_Y,
 						   USER_INFO_TEXT_ALIGN);
+		allegro_print_text(gain_text,
+						   GAIN_INFO_X, GAIN_INFO_Y,
+						   GAIN_INFO_TEXT_ALIGN);
 		al_flip_display();
+
+
+		EXP_LOCK(done_local = DONE, lock_done);
 
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
 			DLOG("%d) deadline missed! woet: %zu ms\n", id, ptask_get_woet_ms(id));
@@ -370,63 +387,75 @@ void * task_display(void * arg)
 	return NULL;
 }
 
+void update_gain_unsafe()
+{
+	al_check(al_set_audio_stream_gain(stream, GAIN / 100.0f),
+				 	 				  "al_set_audio_stream_gain()");
+}
+
 void * task_input(void * arg)
 {
 	ALLEGRO_EVENT event;
+	int done_local = 0;
 	int keycode;
 	int keys[S2I_KEYS_ELEMENTS] = {0};
-	int gain_changed = 0;
 
-	while (!DONE) {
+	while (!done_local) {
 		memset(&event, 0, sizeof(ALLEGRO_EVENT));
 		al_wait_for_event(input_queue, &event);
 
 		if (keys[S2I_KEY_ESCAPE]) {
-			DONE = 1;
+			EXP_LOCK(DONE += 1, lock_done);
 		}
 
 		if (keys[S2I_KEY_UP]) {
+			MUTEX_LOCK(lock_bubble_scale);
 			if (BUBBLE_SCALE < BUBBLE_SCALE_MAX) {
 				BUBBLE_SCALE += BUBBLE_SCALE_STEP;
 			}
+			MUTEX_UNLOCK(lock_bubble_scale);
 		}
 
 		if (keys[S2I_KEY_DOWN]) {
+			MUTEX_LOCK(lock_bubble_scale);
 			if (BUBBLE_SCALE > BUBBLE_SCALE_MIN){
 				BUBBLE_SCALE -= BUBBLE_SCALE_STEP;
 			}
+			MUTEX_UNLOCK(lock_bubble_scale);
 		}
 
 		if (keys[S2I_KEY_LEFT]) {
+			MUTEX_LOCK(lock_bubble_tasks);
 			if (bubble_tasks > BUBBLE_TASKS_MIN){
 				bubble_tasks--;
 			}
+			MUTEX_UNLOCK(lock_bubble_tasks);
 		}
 
 		if (keys[S2I_KEY_RIGHT]) {
+			MUTEX_LOCK(lock_bubble_tasks);
 			if (bubble_tasks < BUBBLE_TASKS_MAX){
 				bubble_tasks++;
 			}
+			MUTEX_UNLOCK(lock_bubble_tasks);
 		}
 
 		if (keys[S2I_KEY_PLUS]) {
+			MUTEX_LOCK(lock_gain);
 			if (GAIN < GAIN_MAX){
 				GAIN += GAIN_STEP;
-				gain_changed = 1;
+				update_gain_unsafe();
 			}
+			MUTEX_UNLOCK(lock_gain);
 		}
 
 		if (keys[S2I_KEY_MINUS]) {
+			MUTEX_LOCK(lock_gain);
 			if (GAIN > GAIN_MIN){
 				GAIN -= GAIN_STEP;
-				gain_changed = 1;
+				update_gain_unsafe();
 			}
-		}
-
-		if (gain_changed) {
-			al_check(al_set_audio_stream_gain(stream, GAIN / 100.0f),
-				 	 "al_set_audio_stream_gain()");
-			gain_changed = 0;
+			MUTEX_UNLOCK(lock_gain);
 		}
 
 		if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
@@ -499,41 +528,29 @@ void * task_input(void * arg)
 				break;
 			}
 		}
+
+		EXP_LOCK(done_local = DONE, lock_done);
 	}
 
 	return NULL;
 }
 
-void prepare_audio_stream()
-{
-	size_t i;
-	size_t fragments;
-	int ret;
-
-	fragments = al_get_available_audio_stream_fragments(stream);
-	for (i = 0; i < FRAGMENT_COUNT / 2; ++i) { //TODO: verify why sometimes try_fill_stream_fragment fails
-		try_fill_stream_fragment();
-
-		ret = fft_audio_next_window(&audio);
-		if (ret == FFT_AUDIO_EOF) {
-			DONE = 1;
-		}
-	}
-}
-
 int main(int argc, char * argv[])
 {
-
-	for (int i = 0; i < 32; ++i) {
-		reds[i][1] = 255 - (i > 2) * (i - 2) * 8;
-		reds[i][2] = i * 8;
-		reds[i][0] = (i > 2) * (i - 2) * 8;
-	}
-
 	char audio_filename[FILENAME_SIZE];
 
+	pthread_mutex_init(&lock_done, NULL);
+	pthread_mutex_init(&lock_audio_time_ms, NULL);
+	pthread_mutex_init(&lock_bubble_scale, NULL);
+	pthread_mutex_init(&lock_bubble_tasks, NULL);
+
+	pthread_cond_init(&cond_producer, NULL);
+	pthread_cond_init(&cond_consumers, NULL);
+	pthread_mutex_init(&lock_fft, NULL);
+
 	DONE = 0;
-	GAIN = GAIN_BASE;
+	GAIN = 50;
+	var_fft = 0;
 	bubble_tasks = BUBBLE_TASKS_BASE;
 	audio_time_ms = 0;
 	memset(audio_filename, 0, FILENAME_SIZE);
@@ -543,7 +560,7 @@ int main(int argc, char * argv[])
 		exit(EXIT_FILENAME_NOT_FOUND);
 	}
 	strncpy(audio_filename, argv[1], FILENAME_SIZE);
-	fft_audio_init(&audio, audio_filename, FRAGMENT_SIZE);
+	fft_audio_init(&audio, audio_filename, FRAGMENT_SIZE, fft_audio_hamming);
 
 	allegro_init();
 	al_set_target_bitmap(NULL);
@@ -555,9 +572,10 @@ int main(int argc, char * argv[])
 									ALLEGRO_AUDIO_DEPTH_FLOAT32,
 									allegro_channel_conf_with(audio.channels));
 	al_set_audio_stream_playmode(stream, ALLEGRO_PLAYMODE_ONCE);
+	update_gain_unsafe();
 	al_check(al_attach_audio_stream_to_mixer(stream, mixer),
 			 "al_attach_audio_stream_to_mixer()");
-	prepare_audio_stream();
+	fill_stream_fragment();
 
 	// Tasks
 	for (int i = 0; i < BUBBLE_TASKS_MAX; ++i) {
@@ -571,10 +589,6 @@ int main(int argc, char * argv[])
 				 TASK_FFT_PERIOD,
 				 TASK_FFT_DEADLINE,
 				 TASK_FFT_PRIORITY);
-	// ptask_create(task_input,
-	// 			 TASK_INPUT_PERIOD,
-	// 			 TASK_INPUT_DEADLINE,
-	// 			 TASK_INPUT_PRIORITY);
 	ptask_create(task_input, 0, 0, 0);
 	ptask_create(task_display,
 				 TASK_DISPLAY_PERIOD,
@@ -583,6 +597,15 @@ int main(int argc, char * argv[])
 	ptask_wait_tasks();
 
 	// Free
+	pthread_mutex_destroy(&lock_bubble_tasks);
+	pthread_mutex_destroy(&lock_bubble_scale);
+	pthread_mutex_destroy(&lock_audio_time_ms);
+	pthread_mutex_destroy(&lock_done);
+
+	pthread_cond_destroy(&cond_producer);
+	pthread_cond_destroy(&cond_consumers);
+	pthread_mutex_destroy(&lock_fft);
+
 	fft_audio_free(&audio);
 	al_drain_audio_stream(stream);
 	allegro_free();
