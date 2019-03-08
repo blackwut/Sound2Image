@@ -10,9 +10,118 @@
 #define NORM_VALUE		((float)0x8000)
 
 
+void fft_audio_fill_window_data_rectangular(fft_audio * audio, size_t N)
+{
+	size_t i;
+
+	for (i = 0; i < N; ++i) {
+		audio->window_data[i] = 1.0f;
+	}
+}
+
+void fft_audio_fill_window_data_welch(fft_audio * audio, size_t N)
+{
+	size_t i;
+	float val;
+
+	for (i = 0; i < N; ++i) {
+		val = (i - 0.5f * (N - 1)) / (0.5f * N + 1);
+		audio->window_data[i] = 1.0f - val * val;
+	}
+}
+
+void fft_audio_fill_window_data_triangular(fft_audio * audio, size_t N)
+{
+	size_t i;
+	const float val = N / 2.0f;
+
+	for (i = 0; i < N; ++i) {
+		audio->window_data[i] = (val - fabsf(i - val)) / val;
+	}
+}
+
+void fft_audio_fill_window_data_barlett(fft_audio * audio, size_t N)
+{
+	size_t i;
+	const float val = (N - 1) / 2.0f;
+
+	for (i = 0; i < N; ++i) {
+		audio->window_data[i] = (val - fabsf(i - val)) / val;
+	}
+}
+
+void fft_audio_fill_window_data_hanning(fft_audio * audio, size_t N)
+{
+	size_t i;
+	float val;
+
+	for (i = 0; i < N; ++i) {
+		val = cosf(2 * M_PI * i / (N - 1));
+		audio->window_data[i] = 0.5f * (1.0f - val);
+	}
+}
+
+void fft_audio_fill_window_data_hamming(fft_audio * audio, size_t N)
+{
+	size_t i;
+	float val;
+
+	for (i = 0; i < N; ++i) {
+		val = cosf(2 * M_PI * i / (N - 1));
+		audio->window_data[i] = 0.53836f - 0.46164f * val;
+	}
+}
+
+void fft_audio_fill_window_data_blackman(fft_audio * audio, size_t N)
+{
+	size_t i;
+	float val_one;
+	float val_two;
+
+	for (i = 0; i < N; ++i) {
+		val_one = cosf(2 * M_PI * i / (N - 1));
+		val_two = cosf(4 * M_PI * i / (N - 1));
+		audio->window_data[i] = 0.42f - 0.5f * val_one + 0.8f * val_two;
+	}
+}
+
+void fft_audio_fill_window_data(fft_audio * audio,
+								const enum fft_audio_window windowing)
+{
+	size_t N = audio->window_elements;
+
+	switch (windowing) {
+		case fft_audio_rectangular:
+			fft_audio_fill_window_data_rectangular(audio, N);
+			break;
+		case fft_audio_welch:
+			fft_audio_fill_window_data_welch(audio, N);
+			break;
+		case fft_audio_triangular:
+			fft_audio_fill_window_data_triangular(audio, N);
+			break;
+		case fft_audio_barlett:
+			fft_audio_fill_window_data_barlett(audio, N);
+			break;
+		case fft_audio_hanning:
+			fft_audio_fill_window_data_hanning(audio, N);
+			break;
+		case fft_audio_hamming:
+			fft_audio_fill_window_data_hamming(audio, N);
+			break;
+		case fft_audio_blackman:
+			fft_audio_fill_window_data_hamming(audio, N);
+			break;
+		default:
+			fft_audio_fill_window_data_rectangular(audio, N);
+			break;
+	}
+}
+
 int fft_audio_init(fft_audio * audio,
 				   const char filename[],
-				   const size_t window_elements)
+				   const size_t window_elements,
+				   const enum fft_audio_window windowing)
 {
 	size_t i;
 	SF_INFO info;
@@ -45,6 +154,8 @@ int fft_audio_init(fft_audio * audio,
 	audio->channels			= info.channels;
 	audio->frames			= info.frames;
 	audio->window_elements	= window_elements;
+
+	fft_audio_fill_window_data(audio, windowing);
 
 	audio->plan = fftwf_plan_dft_1d(window_elements,
 									audio->fft_in,
@@ -84,6 +195,11 @@ int fft_audio_read_data(fft_audio * audio,
 	// Set all the remaining values to 0 if needed
 	for (i = readcount; i < data_size; ++i) {
 		audio->fft_in[i][0] = 0.0f;
+	}
+
+	// Apply window
+	for (i = 0; i < data_size; ++i) {
+		audio->fft_in[i][0] *= audio->window_data[i];
 	}
 
 	return FFT_AUDIO_SUCCESS;
@@ -150,34 +266,11 @@ int fft_audio_stats_samples(fft_audio_stats * stats,
 	stats->imagSum = imagSum;
 	stats->amplitude = 2 * sqrtf(realSum * realSum + imagSum * imagSum) / samples;
 	stats->RMS = sqrtf(2) / 2.0f * stats->amplitude;
-	stats->dB = 20 * log10(stats->amplitude);
+	stats->dB = 20 * log10f(stats->amplitude);
 	stats->phase = atanf(imagSum / realSum);
 
 	return FFT_AUDIO_SUCCESS;
 }
-
-// int fft_audio_stats_freq(fft_audio_stats * stats,
-// 						const fft_audio * audio,
-// 						const size_t from_freq,
-// 						const size_t to_freq)
-// {
-// 	assert(stats != NULL);
-// 	assert(audio != NULL);
-// 	assert(from_freq <= audio->samplerate);
-// 	assert(to_freq <= audio->samplerate);
-
-// 	size_t from_sample = FREQ_TO_SAMPLE(from_freq);
-// 	size_t to_sample = FREQ_TO_SAMPLE(to_freq);
-// 	size_t samples = to_sample - from_sample;
-
-// 	//TODO: find a better way to avoid this problem
-// 	// At least 1 sample to compute
-// 	if (to_sample <= from_sample) {
-// 		to_sample += 1;
-// 	}
-	
-// 	return fft_audio_stats_samples(stats, audio, from_sample, to_sample);
-// }
 
 int fft_audio_free(fft_audio * audio)
 {

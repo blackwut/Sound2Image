@@ -17,6 +17,16 @@
 #define FREQ_TO_SAMPLE(f)	((f) * audio->window_elements / audio->samplerate)
 #define SAMPLE_TO_FREQ(s)	((s) * audio->samplerate / audio->window_elements)
 
+enum fft_audio_window {
+	fft_audio_rectangular,
+	fft_audio_welch,
+	fft_audio_triangular,
+	fft_audio_barlett,
+	fft_audio_hanning,
+	fft_audio_hamming,
+	fft_audio_blackman
+};
+
 typedef struct fft_audio_stats {
 
 	float realSum;
@@ -36,6 +46,7 @@ typedef struct fft_audio {
 	fftwf_plan plan;
 	SNDFILE * file;
 	float data[MAX_DATA_ELEMENTS];
+	float window_data[MAX_DATA_ELEMENTS];
 	fftwf_complex fft_in[MAX_WINDOW_ELEMENTS];
 	fftwf_complex fft_out[MAX_WINDOW_ELEMENTS];
 
@@ -49,17 +60,13 @@ typedef struct fft_audio {
 
 int fft_audio_init(fft_audio * audio,
 				   const char filename[],
-				   const size_t window_elements);
-
+				   const size_t window_elements,
+				   const enum fft_audio_window windowing);
 int fft_audio_next_window(fft_audio * audio);
 int fft_audio_stats_samples(fft_audio_stats * stats,
 							const fft_audio * audio,
 							const size_t from_sample,
 							const size_t to_sample);
-// int fft_audio_stats_freq(fft_audio_stats * stats,
-// 						const fft_audio * audio,
-// 						const size_t from_freq,
-// 						const size_t to_freq);
 int fft_audio_free(fft_audio * audio);
 
 #endif
