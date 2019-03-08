@@ -6,23 +6,18 @@ void BubbleTrails_init()
 {
 	size_t i;
 	size_t j;
-	BubbleTrail * bt;
-	Bubble * b;
 
 	for (i = 0; i < MAX_NUMBER_OF_TRAILS; ++i) {
-		bt = &(bubbleTrails[i]); //TODO: check if *bt = &(bubbleTrails[i]); bt.start = 0; works (same for b)
-		bt->top		= 0;
-		pthread_mutex_init(&(bt->lock), NULL);
+		pthread_mutex_init(&(bubbleTrails[i].lock), NULL);
 
 		for (j = 0; j < MAX_BUBBLES_IN_TRAIL; ++j) {
-			b = &(bubbleTrails[i].bubbles[j]);
-			b->x		= 0.0f;
-			b->y		= 0.0f;
-			b->radius	= 0.0f;
-			b->red		= 0;
-			b->green	= 0;
-			b->blue		= 0;
-			b->freq		= 0.0f;
+			bubbleTrails[i].bubbles[j].x		= 0.0f;
+			bubbleTrails[i].bubbles[j].y		= 0.0f;
+			bubbleTrails[i].bubbles[j].radius	= 0.0f;
+			bubbleTrails[i].bubbles[j].red		= 0;
+			bubbleTrails[i].bubbles[j].green	= 0;
+			bubbleTrails[i].bubbles[j].blue		= 0;
+			bubbleTrails[i].bubbles[j].freq		= 0.0f;
 		}
 	}
 }
@@ -40,22 +35,17 @@ Bubble BubbleTrails_get_bubble_unsafe(size_t id, size_t pos)
 void BubbleTrails_put_unsafe(size_t id, Bubble bubble)
 {
 	size_t next;
-	BubbleTrail * bt;
-	Bubble * b;
 
-	bt = &(bubbleTrails[id]);
+	next = BubbleTrails_top_unsafe(id);
+	bubbleTrails[id].top = NEXT_BUBBLE(next);
 
-	next = NEXT_BUBBLE(bt->top);
-	bt->top = next;
-
-	b = &(bt->bubbles[next]);
-	b->x		= bubble.x;
-	b->y		= bubble.y;
-	b->radius	= bubble.radius;
-	b->red		= bubble.red;
-	b->green	= bubble.green;
-	b->blue		= bubble.blue;
-	b->freq		= bubble.freq;
+	bubbleTrails[id].bubbles[next].x		= bubble.x;
+	bubbleTrails[id].bubbles[next].y		= bubble.y;
+	bubbleTrails[id].bubbles[next].radius	= bubble.radius;
+	bubbleTrails[id].bubbles[next].red		= bubble.red;
+	bubbleTrails[id].bubbles[next].green	= bubble.green;
+	bubbleTrails[id].bubbles[next].blue		= bubble.blue;
+	bubbleTrails[id].bubbles[next].freq		= bubble.freq;
 }
 
 void BubbleTrails_lock(size_t id)

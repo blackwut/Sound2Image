@@ -344,11 +344,10 @@ void * task_display(void * arg)
 
 			for (j = 0; j < MAX_BUBBLES_IN_TRAIL; ++j) {
 				top = NEXT_BUBBLE(top);
-				b = BubbleTrails_get_bubble(i, top);
+				b = BubbleTrails_get_bubble_unsafe(i, top);
 				alpha = (MAX_BUBBLES_IN_TRAIL - j) / (float)MAX_BUBBLES_IN_TRAIL;
 				draw_bubble(b, alpha);
 			}
-
 			BubbleTrails_unlock(i);
 		}
 
@@ -547,6 +546,7 @@ int main(int argc, char * argv[])
 	pthread_cond_init(&cond_producer, NULL);
 	pthread_cond_init(&cond_consumers, NULL);
 	pthread_mutex_init(&lock_fft, NULL);
+	pthread_mutex_init(&lock_gain, NULL);
 
 	DONE = 0;
 	GAIN = 50;
@@ -577,6 +577,8 @@ int main(int argc, char * argv[])
 			 "al_attach_audio_stream_to_mixer()");
 	fill_stream_fragment();
 
+	BubbleTrails_init();
+
 	// Tasks
 	for (int i = 0; i < BUBBLE_TASKS_MAX; ++i) {
 		ptask_create(task_bubble,
@@ -605,6 +607,8 @@ int main(int argc, char * argv[])
 	pthread_cond_destroy(&cond_producer);
 	pthread_cond_destroy(&cond_consumers);
 	pthread_mutex_destroy(&lock_fft);
+
+	pthread_mutex_destroy(&lock_gain);
 
 	fft_audio_free(&audio);
 	al_drain_audio_stream(stream);
