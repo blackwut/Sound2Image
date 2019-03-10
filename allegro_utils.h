@@ -10,7 +10,7 @@
 
 #include "common.h"
 
-#define WINDOW_TITLE "Sound2Image - Alberto Ottimo ©"
+#define WINDOW_TITLE "Sound2Image - Alberto Ottimo"
 
 #define FONT_NAME "font/modum.ttf"
 #define FONT_SIZE_BIG 20
@@ -24,18 +24,6 @@ ALLEGRO_FONT * font_big = NULL;
 ALLEGRO_FONT * font_small = NULL;
 ALLEGRO_COLOR font_color;
 ALLEGRO_EVENT_QUEUE * input_queue = NULL;
-
-
-enum S2I_KEYS {
-    S2I_KEY_ESCAPE,
-    S2I_KEY_UP,
-    S2I_KEY_DOWN,
-    S2I_KEY_LEFT,
-    S2I_KEY_RIGHT,
-    S2I_KEY_PLUS,
-    S2I_KEY_MINUS,
-    S2I_KEYS_ELEMENTS
-};
 
 static inline void al_check(bool test, const char * description)
 {
@@ -83,20 +71,31 @@ static inline void allegro_init()
     al_check(al_init_primitives_addon(), "al_init_primitives_addon()");
 }
 
- ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
- {
+ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
+{
     return (channels == 2 ? ALLEGRO_CHANNEL_CONF_2 : ALLEGRO_CHANNEL_CONF_1);
- }
+}
+
+static inline void allegro_blender_mode_standard()
+{
+    al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
+}
+
+static inline void allegro_blender_mode_alpha()
+{
+    al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
+}
+
 
 static inline void allegro_print_text(const char * text, const float x, const float y, const int align)
 {
-    al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
+    allegro_blender_mode_standard();
     al_draw_text(font_big, font_color, x, y, align, text);
 }
 
 static inline void allegro_print_text_small_color(const char * text, const ALLEGRO_COLOR c, const float x, const float y, const int align)
 {
-    al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
+    allegro_blender_mode_standard();
     al_draw_text(font_small, c, x, y, align, text);
 }
 
