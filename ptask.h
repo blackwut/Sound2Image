@@ -3,7 +3,7 @@
 
 #include <stdio.h>
 
-#define PTASK_ERROR -1
+#define PTASK_SUCCESS       0
 #define PTASK_DEADLINE_MISS 1
 
 int ptask_create(void * (*task_handler)(void *),

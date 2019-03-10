@@ -1,4 +1,5 @@
 #include "ptask.h"
+#include <stdlib.h>
 #include <pthread.h>
 #include <sched.h>
 #include <assert.h>
@@ -8,7 +9,6 @@
 #define _GNU_SOURCE
 
 #define MAX_TASKS 64
-
 
 struct task_par {
 	size_t id;					// task id
@@ -21,9 +21,9 @@ struct task_par {
 	struct timespec dl;			// absolute deadline
 };
 
-struct task_par tp[MAX_TASKS];
-pthread_t tid[MAX_TASKS];
-size_t task_count = 0;
+static struct task_par tp[MAX_TASKS];
+static pthread_t tid[MAX_TASKS];
+static size_t task_count = 0;
 
 
 int ptask_create(void * (*task_handler)(void *),
@@ -55,7 +55,7 @@ int ptask_create(void * (*task_handler)(void *),
 
 	if (ret != 0) {
 		DLOG("Error: pthread_create() with code: %d\n", ret);
-		return PTASK_ERROR;
+		exit(EXIT_PTHREAD_CREATE);
 	}
 
 	return id;
@@ -86,7 +86,7 @@ int ptask_deadline_miss(const size_t id)
 		tp[id].deadline_misses++;
 		return PTASK_DEADLINE_MISS;
 	}
-	return 0;
+	return PTASK_SUCCESS;
 }
 
 void ptask_wait_for_activation(const size_t id)
