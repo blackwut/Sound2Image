@@ -244,15 +244,15 @@ void * task_bubble(void * arg)
 		if (id < active_bubbles_local) {
 			samples_range(id, active_bubbles_local, &from_sample, &to_sample);
 			val = calculate_new_val(id, val, from_sample, to_sample);
+			color_id = MAX_COLORS * (id / (float) active_bubbles_local);
 			x = (id + 1) * bubble_spacing;
 			y = DISPLAY_AUDIO_Y + DISPLAY_AUDIO_H - val * DISPLAY_AUDIO_H;
 		} else {
 			to_sample = 0;
+			color_id = 0;
 			x = BUBBLE_X_OFFSCREEN;
 			y = BUBBLE_Y_OFFSCREEN;
 		}
-
-		color_id = MAX_COLORS * (id / (float) active_bubbles_local);
 
 		btrails_lock(id);
 		btrails_set_color(id,
