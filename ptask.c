@@ -80,8 +80,15 @@ void ptask_activate(const size_t id)
 int ptask_deadline_miss(const size_t id)
 {
 	struct timespec now;
+	struct timespec diff;
+
 	time_now(&now);
-	time_diff(&(tp[id].woet), tp[id].at, now);
+	time_diff(&diff, tp[id].at, now);
+
+	if (time_cmp(diff, tp[id].woet) > 0) {
+		tp[id].woet = diff;
+	}
+
 	if (time_cmp(now, tp[id].dl) > 0) {
 		tp[id].deadline_misses++;
 		return PTASK_DEADLINE_MISS;
