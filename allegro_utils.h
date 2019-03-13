@@ -65,7 +65,8 @@ static inline void allegro_init()
     al_check(al_init_ttf_addon(), "al_init_ttf_addon()");
     font_big = al_load_ttf_font(FONT_NAME, FONT_SIZE_BIG, 0);
     font_small = al_load_ttf_font(FONT_NAME, FONT_SIZE_SMALL, 0);
-    font_color = al_map_rgba(41, 128, 185 , 255);
+    // font_color = al_map_rgba(41, 128, 185 , 255);
+    font_color = al_map_rgba(192,  57,  43, 255);
 
     // Image
     al_check(al_init_primitives_addon(), "al_init_primitives_addon()");
