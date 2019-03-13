@@ -21,8 +21,9 @@
 #define GAIN_INFO_X DISPLAY_W - 10
 #define GAIN_INFO_Y 20
 
-#define USER_INFO_TEXT	"UP: bigger bubbles - DOWN: smaller bubbles - " \
-						"LEFT: less bubbles - RIGHT: more bubbles"
+#define USER_INFO_TEXT	"[UP: Bigger]  [DOWN: Smaller]  " \
+						"[LEFT: Less]  [RIGHT: More]  " \
+						"[PLUS: Vol. Up]  [MINUS: Vol. Down]"
 #define USER_INFO_TEXT_ALIGN ALLEGRO_ALIGN_CENTER
 #define USER_INFO_X DISPLAY_W / 2
 #define USER_INFO_Y DISPLAY_H - 32
@@ -165,7 +166,6 @@ void * task_fft(void * arg)
 
 		ret = fft_audio_load_next_window();
 		if (ret == FFT_AUDIO_EOF) {
-			DLOG("FFT_AUDIO_EOF", NULL);
 			EXP_LOCK(done = 1, lock_done);
 		}
 
@@ -397,12 +397,46 @@ void draw_gain_info()
 				  "Vol:%3zu", gain_local);
 }
 
+#define BUTTON_SIZE 24.0f
+
 void draw_user_info()
 {
+
+	allegro_blender_mode_standard();
 	al_draw_textf(font_big, font_color,
 				  USER_INFO_X, USER_INFO_Y,
 				  USER_INFO_TEXT_ALIGN,
 				  USER_INFO_TEXT);
+
+	// float x1 = 64.0f;
+	// float y1 = 64.0f;
+	// float x2 = x1 + BUTTON_SIZE;
+	// float y2 = y1 + BUTTON_SIZE;
+	// float rx = 4.0f;
+	// float ry = 4.0f;
+	// ALLEGRO_COLOR color = al_map_rgba(255, 255, 255, 255);
+	// float thickness = 1.0f;
+
+	// al_draw_rounded_rectangle(x1, y1, x2, y2, rx, ry, color, thickness);
+
+	// x1 = x1 + 8.0f;
+	// y1 = y1 + (y2 - y1) / 2.0f;
+	// x2 = x2 - 4.0f;
+	// y2 = y1;
+	// al_draw_line(x1, y1, x2, y2, color, thickness);
+
+	// x1 = x1 - 4.0f;
+	// y1 = y1;
+	// x2 = x1 + 4.0f;
+	// y2 = y1 - 4.0f;
+	// float x3 = x2;
+	// float y3 = y1 + 4.0f;
+
+	// al_draw_filled_triangle(x1, y1, x2, y2, x3, y3, color);
+
+	// al_draw_textf(font_big, font_color,
+	// 			  60.0f, y2 + 4.0f - 12.0f - 4.0f,
+	// 			  ALLEGRO_ALIGN_RIGHT, "Less");
 }
 
 void * task_display(void * arg)
