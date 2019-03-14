@@ -8,17 +8,28 @@
 #include "common.h"
 
 
-#define MAX_SAMPLERATE					44100
-#define MAX_CHANNELS					2
-#define MAX_DATA_ELEMENTS				(MAX_CHANNELS * MAX_SAMPLERATE)
-#define MAX_WINDOW_ELEMENTS				MAX_SAMPLERATE
+//------------------------------------------------------------------------------
+// FFT_AUDIO LOCAL CONSTANTS
+//------------------------------------------------------------------------------
+#define MAX_SAMPLERATE			44100
+#define MAX_CHANNELS			2
+#define MAX_DATA_ELEMENTS		(MAX_CHANNELS * MAX_SAMPLERATE)
+#define MAX_WINDOW_ELEMENTS		MAX_SAMPLERATE
 
-#define SILENCE_VALUE	((float)0x0000)
-#define NORM_VALUE		((float)0x8000)
+#define SILENCE_VALUE			((float)0x0000)
+#define NORM_VALUE				((float)0x8000)
 
+
+//------------------------------------------------------------------------------
+// FFT_AUDIO LOCAL MACROS
+//------------------------------------------------------------------------------
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
+
+//------------------------------------------------------------------------------
+// FFT_AUDIO LOCAL STRUCT DEFINITIONS
+//------------------------------------------------------------------------------
 typedef struct {
 	fftwf_plan plan;
 	SNDFILE * file;
@@ -205,7 +216,7 @@ size_t fft_audio_get_channels()
 	return audio.channels;
 }
 
-int fft_audio_read_data(const size_t data_size)
+static int fft_audio_read_data(const size_t data_size)
 {
 	size_t readcount;
 	size_t i;
@@ -257,23 +268,22 @@ int fft_audio_load_next_window()
 void fft_audio_compute_fft()
 {
 	fftwf_execute(audio.plan);
-	audio.stats = fft_audio_get_stats_samples(1, audio.window_elements);
 }
 
-void fft_audio_fill_buffer_data(float * buffer, const size_t fragments)
+void fft_audio_fill_buffer_data(float * buffer)
 {
 	size_t i;
 
 	assert(buffer != NULL);
 
-	for (i = 0; i < fragments * audio.channels; ++i) {
+	for (i = 0; i < audio.window_elements * audio.channels; ++i) {
 		buffer[i] = audio.data[i];
 	}
 }
 
 fft_audio_stats fft_audio_get_stats()
 {
-	return audio.stats;
+	return fft_audio_get_stats_samples(1, audio.window_elements);
 }
 
 fft_audio_stats fft_audio_get_stats_samples(const size_t from,
