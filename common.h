@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+#define DEBUG 1
+
 /**
     Constants
 */
@@ -38,15 +40,12 @@
 #define TASK_BUBBLE_DEADLINE     20
 #define TASK_BUBBLE_PRIORITY     60
 
-#define DEBUG 1
-
 #define EXIT_ALLEGRO_ERROR          1
 #define EXIT_NO_FILENAME_PROVIDED   2
 #define EXIT_OPEN_FILE              3
 #define EXIT_BTRAILS_ERROR          4
 #define EXIT_PTHREAD_CREATE         5
-
-
+#define EXIT_PTHREAD_JOIN			6
 
 
 #define MUTEX_LOCK(lock) pthread_mutex_lock(&lock)
@@ -58,17 +57,10 @@
     MUTEX_UNLOCK(lock)
 
 
-#define PRINT_TO(file, fmt, ...)\
-    fprintf(file, "%s:%d\t"fmt, __func__, __LINE__, __VA_ARGS__)
-
-#define MLOG(fmt, ...) \
-    do { PRINT_TO(stdout, fmt, __VA_ARGS__); } while (0)
-
 #define DLOG(fmt, ...) \
-    do { if (DEBUG) PRINT_TO(stderr, fmt, __VA_ARGS__); } while(0)
-
-
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+	do { \
+		if(DEBUG) \
+			fprintf(stderr, "%s:%d "fmt, __func__, __LINE__, __VA_ARGS__); \
+	} while (0)
 
 #endif

@@ -6,8 +6,6 @@
 #include "common.h"
 #include "time_utils.h"
 
-#define _GNU_SOURCE
-
 #define MAX_TASKS 64
 
 struct task_par {
@@ -54,7 +52,7 @@ int ptask_create(void * (*task_handler)(void *),
 	ret = pthread_create(&tid[id], &attributes, task_handler, (void *)(&tp[id]));
 
 	if (ret != 0) {
-		DLOG("Error: pthread_create() with code: %d\n", ret);
+		DLOG("ERROR - pthread_create() with code: %d\n", ret);
 		exit(EXIT_PTHREAD_CREATE);
 	}
 
@@ -118,7 +116,13 @@ void ptask_sleep_ms(const size_t ms)
 
 void ptask_wait_tasks()
 {
+	int ret;
+
 	for (int i = 0; i < task_count; ++i) {
-		pthread_join(tid[i], NULL);
+		ret = pthread_join(tid[i], NULL);
+		if (ret != 0) {
+			DLOG("ERROR - pthread_join with error code: %d\n", ret);
+			exit(EXIT_PTHREAD_JOIN);
+		}
 	}
 }

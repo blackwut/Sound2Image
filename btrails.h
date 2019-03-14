@@ -15,19 +15,19 @@
 typedef struct {
 	float x;
 	float y;
-} BPoint;
+} bpoint;
 
 typedef struct {
 	unsigned char red;
 	unsigned char green;
 	unsigned char blue;
-} BColor;
+} bcolor;
 
 int btrails_init();
 size_t btrails_get_top(const size_t trail_id);
-BPoint btrails_get_bubble_pos(const size_t trail_id,
+bpoint btrails_get_bubble_pos(const size_t trail_id,
 							  const size_t bubble_id);
-BColor btrails_get_color(const size_t trail_id);
+bcolor btrails_get_color(const size_t trail_id);
 size_t btrails_get_freq(const size_t trail_id);
 void btrails_put_bubble_pos(const size_t trail_id,
 							const float x,

@@ -28,32 +28,31 @@
 #define USER_INFO_X DISPLAY_W / 2
 #define USER_INFO_Y DISPLAY_H - 32
 
-#define FRAGMENT_COUNT			8
-#define FRAGMENT_SAMPLES		882 // Must be a diveder of both FRAGMENT_SAMPLERATE and 1000/FRAMERATE
-#define FRAGMENT_DEPTH 			ALLEGRO_AUDIO_DEPTH_FLOAT32
+#define FRAGMENT_COUNT		8
+#define FRAGMENT_SAMPLES	882 // Must be a diveder of both FRAGMENT_SAMPLERATE and 1000/FRAMERATE
+#define FRAGMENT_DEPTH		ALLEGRO_AUDIO_DEPTH_FLOAT32
 
 #define BUBBLE_TASKS_MIN 8
 #define BUBBLE_TASKS_BASE 24
 #define BUBBLE_TASKS_MAX 32
 #define BUBBLE_FILTER 0.5
 
-
 #define BUBBLE_X_OFFSCREEN		-100.0f
 #define BUBBLE_Y_OFFSCREEN		-100.0f
-#define BUBBLE_THICKNESS     2
-#define BUBBLE_RADIUS 		 8
-#define BUBBLE_ALPHA_FILLED  200
-#define BUBBLE_ALPHA_STROKE  255
+#define BUBBLE_THICKNESS		2
+#define BUBBLE_RADIUS 			8
+#define BUBBLE_ALPHA_FILLED		200
+#define BUBBLE_ALPHA_STROKE		255
 
 #define BUBBLE_SCALE_MIN    0.5f
 #define BUBBLE_SCALE_BASE   1.0f
 #define BUBBLE_SCALE_MAX    2.0f
 #define BUBBLE_SCALE_STEP   0.1f
 
-#define GAIN_MIN 0
-#define GAIN_BASE 50
-#define GAIN_MAX 100
-#define GAIN_STEP 1
+#define GAIN_MIN	0
+#define GAIN_BASE	50
+#define GAIN_MAX	100
+#define GAIN_STEP	1
 
 size_t samplerate;
 
@@ -78,7 +77,6 @@ pthread_mutex_t lock_gain;
 size_t gain;
 
 ALLEGRO_AUDIO_STREAM * stream;
-ALLEGRO_MIXER * mixer;
 
 #define MAX_COLORS 32
 unsigned char colors[MAX_COLORS][3] = {
@@ -160,7 +158,8 @@ void * task_fft(void * arg)
 		}
 
 		fill_stream_fragment();
-		EXP_LOCK(audio_time_ms += TASK_FFT_PERIOD, lock_audio_time_ms);
+		EXP_LOCK(audio_time_ms += FRAGMENT_SAMPLES * 1000/ samplerate,
+				 lock_audio_time_ms);
 
 		fft_audio_compute_fft();
 
@@ -287,20 +286,20 @@ void draw_trail(const size_t id, const float spacing, const float scale)
 	size_t i;
 	size_t top;
 	size_t freq;
-	BColor bcolor;
+	bcolor trail_color;
 	ALLEGRO_COLOR color;
 	float alpha;
-	BPoint bpoint;
+	bpoint point;
 
 	btrails_lock(id);
 	top = btrails_get_top(id);
 	freq = btrails_get_freq(id);
-	bcolor = btrails_get_color(id);
+	trail_color = btrails_get_color(id);
 
 	allegro_blender_mode_standard();
-	color = al_map_rgba(bcolor.red,
-						bcolor.green,
-						bcolor.blue,
+	color = al_map_rgba(trail_color.red,
+						trail_color.green,
+						trail_color.blue,
 						BUBBLE_ALPHA_STROKE);
 	al_draw_textf(font_small, color,
 				  (id + 1) * spacing,
@@ -311,22 +310,22 @@ void draw_trail(const size_t id, const float spacing, const float scale)
 	allegro_blender_mode_alpha();
 	for (i = 0; i < MAX_BELEMS; ++i) {
 		top = NEXT_BELEM(top);
-		bpoint = btrails_get_bubble_pos(id, i);
+		point = btrails_get_bubble_pos(id, i);
 		alpha = (MAX_BELEMS - i) / (float) MAX_BELEMS;
 
-		color = al_map_rgba(bcolor.red,
-							bcolor.green,
-							bcolor.blue,
+		color = al_map_rgba(trail_color.red,
+							trail_color.green,
+							trail_color.blue,
 							BUBBLE_ALPHA_FILLED * alpha);
-		al_draw_filled_circle(bpoint.x, bpoint.y,
+		al_draw_filled_circle(point.x, point.y,
 							  BUBBLE_RADIUS * scale,
 							  color);
 
-		color = al_map_rgba(bcolor.red,
-							bcolor.green,
-							bcolor.blue,
+		color = al_map_rgba(trail_color.red,
+							trail_color.green,
+							trail_color.blue,
 							BUBBLE_ALPHA_STROKE * alpha);
-		al_draw_circle(bpoint.x, bpoint.y,
+		al_draw_circle(point.x, point.y,
 					   BUBBLE_RADIUS * scale,
 					   color,
 					   BUBBLE_THICKNESS);
@@ -607,7 +606,6 @@ int main(int argc, char * argv[])
 	allegro_init();
 	al_set_target_bitmap(NULL);
 
-	mixer = al_get_default_mixer();
 	stream = al_create_audio_stream(FRAGMENT_COUNT,
 									FRAGMENT_SAMPLES,
 									samplerate,
@@ -615,7 +613,7 @@ int main(int argc, char * argv[])
 									allegro_channel_conf_with(channels));
 	al_set_audio_stream_playmode(stream, ALLEGRO_PLAYMODE_ONCE);
 	update_gain(gain);
-	al_check(al_attach_audio_stream_to_mixer(stream, mixer),
+	al_check(al_attach_audio_stream_to_mixer(stream, al_get_default_mixer()),
 			 "al_attach_audio_stream_to_mixer()");
 
 	ret = btrails_init();

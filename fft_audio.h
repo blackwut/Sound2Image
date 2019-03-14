@@ -2,13 +2,10 @@
 #define FFT_AUDIO_H
 
 #include <stdlib.h>
-#include <math.h>
-#include <fftw3.h>
-#include <sndfile.h>
 
 #define FFT_AUDIO_SUCCESS				0
-#define FFT_AUDIO_EOF					1
-#define FFT_AUDIO_ERROR_OPEN_FILE		2
+#define FFT_AUDIO_ERROR_OPEN_FILE		1
+#define FFT_AUDIO_EOF					2
 
 
 enum fft_audio_window {
@@ -25,21 +22,16 @@ typedef struct fft_audio_stats {
 	float magMin;
 	float magAvg;
 	float magMax;
-
-	float amplitude;
-	float dB;
 } fft_audio_stats;
 
 
 int fft_audio_init(const char filename[],
 				   const size_t window_elements,
 				   const enum fft_audio_window windowing);
-
 size_t fft_audio_get_samplerate();
 size_t fft_audio_get_channels();
-
 int fft_audio_load_next_window();
-int fft_audio_compute_fft();
+void fft_audio_compute_fft();
 void fft_audio_fill_buffer_data(float * buffer, const size_t fragments);
 fft_audio_stats fft_audio_get_stats();
 fft_audio_stats fft_audio_get_stats_samples(const size_t from,

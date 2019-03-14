@@ -2,15 +2,15 @@
 #include <assert.h>
 
 typedef struct {
-	BPoint pos[MAX_BELEMS];
+	bpoint pos[MAX_BELEMS];
 	size_t top;
-	BColor color;
+	bcolor color;
 	size_t freq;
 
 	pthread_mutex_t lock;
-} Trail;
+} btrail;
 
-static Trail trails[MAX_BTRAILS];
+static btrail trails[MAX_BTRAILS];
 
 
 int btrails_init()
@@ -45,16 +45,15 @@ size_t btrails_get_top(const size_t trail_id)
 	return trails[trail_id].top;
 }
 
-BPoint btrails_get_bubble_pos(const size_t trail_id,
+bpoint btrails_get_bubble_pos(const size_t trail_id,
 							  const size_t bubble_id)
 {
 	assert(trail_id < MAX_BTRAILS);
 	assert(bubble_id < MAX_BELEMS);
-
 	return trails[trail_id].pos[bubble_id];
 }
 
-BColor btrails_get_color(const size_t trail_id)
+bcolor btrails_get_color(const size_t trail_id)
 {
 	assert(trail_id < MAX_BTRAILS);
 	return trails[trail_id].color;
@@ -101,17 +100,20 @@ void btrails_set_freq(const size_t trail_id,
 
 void btrails_lock(const size_t trail_id)
 {
+	assert(trail_id < MAX_BTRAILS);
 	pthread_mutex_lock(&(trails[trail_id].lock));
 }
 
 void btrails_unlock(const size_t trail_id)
 {
+	assert(trail_id < MAX_BTRAILS);
 	pthread_mutex_unlock(&(trails[trail_id].lock));
 }
 
 void btrails_free()
 {
 	size_t i;
+
 	for (i = 0; i < MAX_BTRAILS; ++i) {
 		pthread_mutex_destroy(&(trails[i].lock));
 	}

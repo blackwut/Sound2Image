@@ -10,7 +10,6 @@
 #define TIME_MICROSEC	(1000000)
 #define TIME_NANOSEC	(1000000000)
 
-#define TIME_SEC_TO_MINS(t)		((t) / 60)
 #define TIME_SEC_TO_MSEC(t)		((t) * TIME_MILLISEC)
 #define TIME_SEC_TO_NSEC(t)		((t) * TIME_NANOSEC)
 #define TIME_MSEC_TO_SEC(t)		((t) / TIME_MILLISEC)

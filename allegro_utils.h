@@ -28,7 +28,7 @@ ALLEGRO_EVENT_QUEUE * input_queue = NULL;
 static inline void al_check(bool test, const char * description)
 {
     if (test) return;
-    fprintf(stderr, "ALLEGRO error in %s\n", description);
+    DLOG("ERROR - %s\n", description);
     exit(EXIT_ALLEGRO_ERROR);
 }
 
@@ -85,19 +85,6 @@ static inline void allegro_blender_mode_standard()
 static inline void allegro_blender_mode_alpha()
 {
     al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
-}
-
-
-static inline void allegro_print_text(const char * text, const float x, const float y, const int align)
-{
-    allegro_blender_mode_standard();
-    al_draw_text(font_big, font_color, x, y, align, text);
-}
-
-static inline void allegro_print_text_small_color(const char * text, const ALLEGRO_COLOR c, const float x, const float y, const int align)
-{
-    allegro_blender_mode_standard();
-    al_draw_text(font_small, c, x, y, align, text);
 }
 
 static inline void allegro_free()

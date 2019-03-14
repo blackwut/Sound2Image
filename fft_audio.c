@@ -1,6 +1,9 @@
 #include "fft_audio.h"
-#include <float.h>
 #include <assert.h>
+#include <math.h>
+#include <fftw3.h>
+#include <sndfile.h>
+#include <float.h>
 #include <string.h>
 #include "common.h"
 
@@ -13,6 +16,8 @@
 #define SILENCE_VALUE	((float)0x0000)
 #define NORM_VALUE		((float)0x8000)
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
 typedef struct {
 	fftwf_plan plan;
@@ -249,12 +254,10 @@ int fft_audio_load_next_window()
 	return FFT_AUDIO_SUCCESS;
 }
 
-int fft_audio_compute_fft()
+void fft_audio_compute_fft()
 {
 	fftwf_execute(audio.plan);
 	audio.stats = fft_audio_get_stats_samples(1, audio.window_elements);
-
-	return FFT_AUDIO_SUCCESS;
 }
 
 void fft_audio_fill_buffer_data(float * buffer, const size_t fragments)
@@ -278,17 +281,13 @@ fft_audio_stats fft_audio_get_stats_samples(const size_t from,
 {
 	size_t i;
 	size_t samples = to - from;
-
-	fft_audio_stats stats;
-
 	float real;
 	float imag;
 	float mag = 0.0f;
 	float magMin = FLT_MAX;
 	float magAvg = 0.0f;
 	float magMax = FLT_MIN;
-	float realSum = 0.0f;
-	float imagSum = 0.0f;
+	fft_audio_stats stats;
 
 	assert(from <= audio.window_elements);
 	assert(to <= audio.window_elements);
@@ -302,16 +301,11 @@ fft_audio_stats fft_audio_get_stats_samples(const size_t from,
 		magMin = MIN(magMin, mag);
 		magAvg += mag;
 		magMax = MAX(magMax, mag);
-
-		realSum += real;
-		imagSum += imag;
 	}
 
 	stats.magMin = magMin;
 	stats.magAvg = magAvg / samples;
 	stats.magMax = magMax;
-	stats.amplitude = 2 * sqrtf(realSum * realSum + imagSum * imagSum) / samples;
-	stats.dB = 20 * log10f(stats.amplitude);
 
 	return stats;
 }
