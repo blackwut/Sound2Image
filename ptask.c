@@ -6,24 +6,37 @@
 #include "common.h"
 #include "time_utils.h"
 
-#define MAX_TASKS 64
+//------------------------------------------------------------------------------
+// CONSTANTS
+//------------------------------------------------------------------------------
+#define MAX_TASKS	64	// Maximum number of periodic task that can be created
+
 
 struct task_par {
-	size_t id;					// task id
-	size_t period;				// period in ms
-	size_t deadline;			// relative deadline in ms
-	size_t priority;			// between 0 (low) and 99 (high)
-	struct timespec woet;		// worst observed execution time
-	size_t deadline_misses;		// number of misses
-	struct timespec at;			// next activivation time
+	size_t id;					// id of the periodic task
+	size_t period;				// period expressed in milliseconds
+	size_t deadline;			// relative deadline expressed in milliseconds
+	size_t priority;			// priority in the range 0 (low) to 99 (high)
+	struct timespec woet;		// worst observed execution time expressed in ms
+	size_t deadline_misses;		// number of deadline misses
+	struct timespec at;			// next absolute activivation time
 	struct timespec dl;			// absolute deadline
 };
 
-static struct task_par tp[MAX_TASKS];
-static pthread_t tid[MAX_TASKS];
-static size_t task_count = 0;
+
+static struct task_par tp[MAX_TASKS];	// parameters of created tasks
+static pthread_t tid[MAX_TASKS];		// ids of created tasks
+static size_t task_count = 0;			// number of created tasks
 
 
+//------------------------------------------------------------------------------
+//
+// This function creates a periodic task. The periodic task is implemented with
+// a POSIX pthread and scheduled in a Round-Robin fashion.
+// All releated information of the periodic task are stored into a proper
+// structure in order to keep track of it and manage it during the execution.
+//
+//------------------------------------------------------------------------------
 int ptask_create(void * (*task_handler)(void *),
 				 const size_t period,
 				 const size_t deadline,
@@ -34,9 +47,10 @@ int ptask_create(void * (*task_handler)(void *),
 	pthread_attr_t attributes;
 	struct sched_param sched;
 
+	assert(task_count < MAX_TASKS);
+
 	id = task_count;
 	task_count++;
-	assert(id < MAX_TASKS);
 
 	tp[id].id = id;
 	tp[id].period = period;
@@ -56,15 +70,34 @@ int ptask_create(void * (*task_handler)(void *),
 		exit(EXIT_PTHREAD_CREATE);
 	}
 
+	pthread_attr_destroy(&attributes);
+
 	return id;
 }
 
+
+//------------------------------------------------------------------------------
+//
+// This function extracts the id of the periodic task from the pointer arg that
+// contains all releated information of the periodic task.
+//
+//------------------------------------------------------------------------------
 size_t ptask_id(const void * arg)
 {
 	struct task_par * tp = (struct task_par *)arg;
 	return tp->id;
 }
 
+
+//------------------------------------------------------------------------------
+//
+// This function activates the periodic task.
+// It sets the next absolute activation time to the current time plus the
+// relative period.
+// It also sets the absolute deadline to the current time plus the relative
+// deadline.
+//
+//------------------------------------------------------------------------------
 void ptask_activate(const size_t id)
 {
 	struct timespec now;
@@ -75,6 +108,15 @@ void ptask_activate(const size_t id)
 	time_add_ms(&(tp[id].dl), tp[id].deadline);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// This function checks if the periodic task missed the deadline.
+// It takes the current time and compare it to the absolute deadline in order to
+// evaluate if the deadline is missed. It also calculate the current woet (worst
+// execution observed time).
+//
+//------------------------------------------------------------------------------
 int ptask_deadline_miss(const size_t id)
 {
 	struct timespec now;
@@ -94,6 +136,14 @@ int ptask_deadline_miss(const size_t id)
 	return PTASK_SUCCESS;
 }
 
+
+//------------------------------------------------------------------------------
+//
+// This function suspends the periodic task until the next activation.
+// When the periodic task is awaken, it updates the absolute activation time and
+// the absolute deadline.
+//
+//------------------------------------------------------------------------------
 void ptask_wait_for_activation(const size_t id)
 {
 	time_nanosleep(tp[id].at);
@@ -101,19 +151,26 @@ void ptask_wait_for_activation(const size_t id)
 	time_add_ms(&(tp[id].dl), tp[id].period);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// This function returns the woet (worst observed execution time) of the
+// periodic task expressed in milliseconds.
+//
+//------------------------------------------------------------------------------
 size_t ptask_get_woet_ms(const size_t id)
 {
 	return time_to_ms(tp[id].woet);
 }
 
-void ptask_sleep_ms(const size_t ms)
-{
-	struct timespec now;
-	time_now(&now);
-	time_add_ms(&now, ms);
-	time_nanosleep(now);
-}
 
+//------------------------------------------------------------------------------
+//
+// This function provide a simple way to join all the periodic tasks created.
+// It checks if the tasks make the join with success. If not the program exits
+// with EXIT_PTHREAD_JOIN value.
+//
+//------------------------------------------------------------------------------
 void ptask_wait_tasks()
 {
 	int ret;
