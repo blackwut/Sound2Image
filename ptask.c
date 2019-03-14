@@ -7,13 +7,13 @@
 #include "time_utils.h"
 
 //------------------------------------------------------------------------------
-// CONSTANTS
+// PTASK LOCAL CONSTANTS
 //------------------------------------------------------------------------------
 #define MAX_TASKS	64	// Maximum number of periodic task that can be created
 
 
 //------------------------------------------------------------------------------
-// PTASK STRUCTURES
+// PTASK STRUCTURES DEFINITION
 //------------------------------------------------------------------------------
 typedef struct {
 	size_t id;					// id of the periodic task
@@ -28,7 +28,7 @@ typedef struct {
 
 
 //------------------------------------------------------------------------------
-// PTASK DATA
+// PTASK LOCAL DATA
 //------------------------------------------------------------------------------
 static task_par tp[MAX_TASKS];		// parameters of created tasks
 static pthread_t tid[MAX_TASKS];	// ids of created tasks
