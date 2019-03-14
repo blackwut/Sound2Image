@@ -12,7 +12,10 @@
 #define MAX_TASKS	64	// Maximum number of periodic task that can be created
 
 
-struct task_par {
+//------------------------------------------------------------------------------
+// PTASK STRUCTURES
+//------------------------------------------------------------------------------
+typedef struct {
 	size_t id;					// id of the periodic task
 	size_t period;				// period expressed in milliseconds
 	size_t deadline;			// relative deadline expressed in milliseconds
@@ -21,12 +24,15 @@ struct task_par {
 	size_t deadline_misses;		// number of deadline misses
 	struct timespec at;			// next absolute activivation time
 	struct timespec dl;			// absolute deadline
-};
+} task_par;
 
 
-static struct task_par tp[MAX_TASKS];	// parameters of created tasks
-static pthread_t tid[MAX_TASKS];		// ids of created tasks
-static size_t task_count = 0;			// number of created tasks
+//------------------------------------------------------------------------------
+// PTASK DATA
+//------------------------------------------------------------------------------
+static task_par tp[MAX_TASKS];		// parameters of created tasks
+static pthread_t tid[MAX_TASKS];	// ids of created tasks
+static size_t task_count = 0;		// number of created tasks
 
 
 //------------------------------------------------------------------------------
