@@ -90,7 +90,7 @@ int ptask_create(void * (*task_handler)(void *),
 //------------------------------------------------------------------------------
 size_t ptask_id(const void * arg)
 {
-	struct task_par * tp = (struct task_par *)arg;
+	task_par * tp = (task_par *)arg;
 	return tp->id;
 }
 
