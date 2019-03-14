@@ -13,7 +13,7 @@
 
 
 //------------------------------------------------------------------------------
-// PTASK LOCAL STRUCTURES DEFINITION
+// PTASK LOCAL STRUCT DEFINITIONS
 //------------------------------------------------------------------------------
 typedef struct {
 	size_t id;					// id of the periodic task
