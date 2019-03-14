@@ -1,103 +1,128 @@
 #include "ptask.h"
+#include <stdlib.h>
 #include <pthread.h>
 #include <sched.h>
 #include <assert.h>
+#include "common.h"
 #include "time_utils.h"
 
-#define MAX_TASKS (64)
-
+#define MAX_TASKS 64
 
 struct task_par {
-    int id;             // task argument
-    long wcet;          // in microseconds
-    int period;         // in milliseconds
-    int deadline;       // relative (ms)
-    int priority;       // in [0,99]
-    int deadline_miss;  // no. of misses
-    struct timespec at; // next activ. time
-    struct timespec dl; // abs. deadline
+	size_t id;					// task id
+	size_t period;				// period in ms
+	size_t deadline;			// relative deadline in ms
+	size_t priority;			// between 0 (low) and 99 (high)
+	struct timespec woet;		// worst observed execution time
+	size_t deadline_misses;		// number of misses
+	struct timespec at;			// next activivation time
+	struct timespec dl;			// absolute deadline
 };
 
-struct task_par tp[MAX_TASKS];
-pthread_t tid[MAX_TASKS];
-size_t taskCount = 0;
+static struct task_par tp[MAX_TASKS];
+static pthread_t tid[MAX_TASKS];
+static size_t task_count = 0;
 
 
 int ptask_create(void * (*task_handler)(void *),
-                 const int period,
-                 const int deadline,
-                 const int priority)
+				 const size_t period,
+				 const size_t deadline,
+				 const size_t priority)
 {
-    pthread_attr_t task_attributes;
-    struct sched_param task_sched_params;
-    int ret;
+	int ret;
+	size_t id;
+	pthread_attr_t attributes;
+	struct sched_param sched;
 
-    int id = taskCount++;
-    assert(id < MAX_TASKS);
+	id = task_count;
+	task_count++;
+	assert(id < MAX_TASKS);
 
-    tp[id].id = id;
-    tp[id].period = period;
-    tp[id].deadline = deadline;
-    tp[id].priority = priority;
-    tp[id].deadline_miss = 0;
+	tp[id].id = id;
+	tp[id].period = period;
+	tp[id].deadline = deadline;
+	tp[id].priority = priority;
+	tp[id].deadline_misses = 0;
 
-    pthread_attr_init(&task_attributes);
-    pthread_attr_setinheritsched(&task_attributes, PTHREAD_EXPLICIT_SCHED);
-    pthread_attr_setschedpolicy(&task_attributes, SCHED_RR);
-    task_sched_params.sched_priority = tp[id].priority;
-    pthread_attr_setschedparam(&task_attributes, &task_sched_params);
-    ret = pthread_create(&tid[id], &task_attributes, task_handler, (void *)(&tp[id]));
+	pthread_attr_init(&attributes);
+	pthread_attr_setinheritsched(&attributes, PTHREAD_EXPLICIT_SCHED);
+	pthread_attr_setschedpolicy(&attributes, SCHED_RR);
+	sched.sched_priority = tp[id].priority;
+	pthread_attr_setschedparam(&attributes, &sched);
+	ret = pthread_create(&tid[id], &attributes, task_handler, (void *)(&tp[id]));
 
-    if (ret != 0) return PTASK_ERROR;
+	if (ret != 0) {
+		DLOG("ERROR - pthread_create() with code: %d\n", ret);
+		exit(EXIT_PTHREAD_CREATE);
+	}
 
-    return id;
+	return id;
 }
 
-int ptask_id(const void * arg)
+size_t ptask_id(const void * arg)
 {
-    struct task_par * tp = (struct task_par *)arg;
-    return tp->id;
+	struct task_par * tp = (struct task_par *)arg;
+	return tp->id;
 }
 
-void ptask_activate(const int id)
+void ptask_activate(const size_t id)
 {
-    struct timespec now;
-    time_now(&now);
-    time_copy(&(tp[id].at), now);
-    time_copy(&(tp[id].dl), now);
-    time_add_ms(&(tp[id].at), tp[id].period);
-    time_add_ms(&(tp[id].dl), tp[id].deadline);
+	struct timespec now;
+	time_now(&now);
+	time_copy(&(tp[id].at), now);
+	time_copy(&(tp[id].dl), now);
+	time_add_ms(&(tp[id].at), tp[id].period);
+	time_add_ms(&(tp[id].dl), tp[id].deadline);
 }
 
-int ptask_deadline_miss(const int id)
+int ptask_deadline_miss(const size_t id)
 {
-    struct timespec now;
-    time_now(&now);
-    if (time_cmp(now, tp[id].dl) > 0) {
-        tp[id].deadline_miss++;
-        return PTASK_DEADLINE_MISS;
-    }
-    return 0;
+	struct timespec now;
+	struct timespec diff;
+
+	time_now(&now);
+	time_diff(&diff, tp[id].at, now);
+
+	if (time_cmp(diff, tp[id].woet) > 0) {
+		tp[id].woet = diff;
+	}
+
+	if (time_cmp(now, tp[id].dl) > 0) {
+		tp[id].deadline_misses++;
+		return PTASK_DEADLINE_MISS;
+	}
+	return PTASK_SUCCESS;
 }
 
-void ptask_wait_for_activation(const int id)
+void ptask_wait_for_activation(const size_t id)
 {
-    time_nanosleep(&(tp[id].at));
-    time_add_ms(&(tp[id].at), tp[id].period);
-    time_add_ms(&(tp[id].dl), tp[id].deadline); //TODO: check if deadline is correct or period (slide 10 of page 4 of slides) is correct!
+	time_nanosleep(tp[id].at);
+	time_add_ms(&(tp[id].at), tp[id].period);
+	time_add_ms(&(tp[id].dl), tp[id].period);
 }
 
-void ptask_sleep_ms(const int ms)
+size_t ptask_get_woet_ms(const size_t id)
 {
-    struct timespec now;
-    time_now(&now);
-    time_add_ms(&now, ms);
-    time_nanosleep(&now);
+	return time_to_ms(tp[id].woet);
+}
+
+void ptask_sleep_ms(const size_t ms)
+{
+	struct timespec now;
+	time_now(&now);
+	time_add_ms(&now, ms);
+	time_nanosleep(now);
 }
 
 void ptask_wait_tasks()
 {
-    for (int i = 0; i < taskCount; ++i) {
-        pthread_join(tid[i], NULL);
-    }
+	int ret;
+
+	for (int i = 0; i < task_count; ++i) {
+		ret = pthread_join(tid[i], NULL);
+		if (ret != 0) {
+			DLOG("ERROR - pthread_join with error code: %d\n", ret);
+			exit(EXIT_PTHREAD_JOIN);
+		}
+	}
 }
