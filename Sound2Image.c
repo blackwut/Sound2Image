@@ -81,7 +81,7 @@ pthread_mutex_t lock_gain;
 size_t gain;
 
 pthread_mutex_t lock_windowing;
-enum fft_audio_windowing windowing;
+fft_audio_windowing windowing;
 
 ALLEGRO_AUDIO_STREAM * stream;
 

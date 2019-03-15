@@ -41,7 +41,7 @@ typedef struct {
 	size_t channels;							// Num. of channels of the audio
 
 	size_t frames_elements;						// Num. of elems in a frame
-	enum fft_audio_windowing windowing;			// Windowing method
+	fft_audio_windowing windowing;				// Windowing method
 	fft_audio_stats stats;						// Statistics of current frame
 } fft_audio;
 
@@ -211,7 +211,7 @@ static void fft_audio_fill_windowing_data_blackman()
 // function that calculates and stores the windowing data.
 //
 //------------------------------------------------------------------------------
-static void fft_audio_fill_windowing_data(const enum fft_audio_windowing windowing)
+static void fft_audio_fill_windowing_data(const fft_audio_windowing windowing)
 {
 
 	switch (windowing) {
@@ -276,7 +276,9 @@ static int fft_audio_read_data()
 
 	assert(audio.frames_elements * audio.channels <= MAX_DATA_ELEMS);
 
-	readcount = sf_read_float(audio.file, audio.data, audio.frames_elements * audio.channels);
+	readcount = sf_read_float(audio.file,
+							  audio.data,
+							  audio.frames_elements * audio.channels);
 	if (readcount == 0) {
 		return FFT_AUDIO_EOF;
 	}
@@ -311,7 +313,7 @@ static int fft_audio_read_data()
 //------------------------------------------------------------------------------
 int fft_audio_init(const char filename[],
 				   const size_t frames_elements,
-				   const enum fft_audio_windowing windowing)
+				   const fft_audio_windowing windowing)
 {
 	size_t i;
 	SF_INFO info;
@@ -389,7 +391,7 @@ size_t fft_audio_get_channels()
 // This function returns the string name of the provided windowing.
 //
 //------------------------------------------------------------------------------
-char * fft_audio_get_windowing_name(enum fft_audio_windowing windowing)
+char * fft_audio_get_windowing_name(fft_audio_windowing windowing)
 {
 	assert(fft_audio_rectangular <= windowing);
 	assert(windowing <= fft_audio_blackman);
@@ -422,7 +424,7 @@ int fft_audio_load_next_frame()
 // windowing method provided.
 //
 //------------------------------------------------------------------------------
-void fft_audio_compute_fft(enum fft_audio_windowing windowing)
+void fft_audio_compute_fft(fft_audio_windowing windowing)
 {
 	assert(fft_audio_rectangular <= windowing);
 	assert(windowing <= fft_audio_blackman);

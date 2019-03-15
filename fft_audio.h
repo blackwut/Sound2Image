@@ -26,7 +26,7 @@
 //------------------------------------------------------------------------------
 // FFT_AUDIO GLOBAL ENUMS DECLARATION
 //------------------------------------------------------------------------------
-enum fft_audio_windowing {
+typedef enum {
 	fft_audio_rectangular = 0,
 	fft_audio_welch,
 	fft_audio_triangular,
@@ -34,7 +34,7 @@ enum fft_audio_windowing {
 	fft_audio_hanning,
 	fft_audio_hamming,
 	fft_audio_blackman
-};
+} fft_audio_windowing;
 
 
 //------------------------------------------------------------------------------
@@ -68,7 +68,7 @@ typedef struct fft_audio_stats {
 //------------------------------------------------------------------------------
 int fft_audio_init(const char filename[],
 				   const size_t frame_elements,
-				   const enum fft_audio_windowing windowing);
+				   const fft_audio_windowing windowing);
 
 //------------------------------------------------------------------------------
 //
@@ -106,7 +106,7 @@ size_t fft_audio_get_channels();
 // The string name of the provided windowing
 //
 //------------------------------------------------------------------------------
-char * fft_audio_get_windowing_name(enum fft_audio_windowing windowing);
+char * fft_audio_get_windowing_name(fft_audio_windowing windowing);
 
 
 //------------------------------------------------------------------------------
@@ -132,7 +132,7 @@ int fft_audio_load_next_frame();
 // windowing: the type of window to be applied
 //
 //------------------------------------------------------------------------------
-void fft_audio_compute_fft(enum fft_audio_windowing windowing);
+void fft_audio_compute_fft(fft_audio_windowing windowing);
 
 
 //------------------------------------------------------------------------------
