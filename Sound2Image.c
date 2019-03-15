@@ -13,6 +13,10 @@
 #define BUBBLES_INFO_X 10
 #define BUBBLES_INFO_Y 0
 
+#define WINDOWING_INFO_TEXT_ALIGN ALLEGRO_ALIGN_LEFT
+#define WINDOWING_INFO_X 10
+#define WINDOWING_INFO_Y 20
+
 #define TIMER_INFO_TEXT_ALIGN ALLEGRO_ALIGN_RIGHT
 #define TIMER_INFO_X DISPLAY_W - 10
 #define TIMER_INFO_Y 0
@@ -76,6 +80,9 @@ int var_fft;
 pthread_mutex_t lock_gain;
 size_t gain;
 
+pthread_mutex_t lock_windowing;
+enum fft_audio_window windowing;
+
 ALLEGRO_AUDIO_STREAM * stream;
 
 #define MAX_COLORS 32
@@ -134,7 +141,7 @@ void fill_stream_fragment()
 
 	buffer = al_get_audio_stream_fragment(stream);
 	if (buffer != NULL) {
-		fft_audio_fill_buffer_data(buffer, FRAGMENT_SAMPLES);
+		fft_audio_fill_buffer_data(buffer);
 		al_check(al_set_audio_stream_fragment(stream, buffer),
 				 "al_set_audio_stream_fragment()");
 	} else {
@@ -146,6 +153,7 @@ void * task_fft(void * arg)
 {
 	const int id = ptask_id(arg);
 	int done_local = 0;
+	int windowing_local;
 	int ret;
 
 	ptask_activate(id);
@@ -161,7 +169,8 @@ void * task_fft(void * arg)
 		EXP_LOCK(audio_time_ms += FRAGMENT_SAMPLES * 1000/ samplerate,
 				 lock_audio_time_ms);
 
-		fft_audio_compute_fft();
+		EXP_LOCK(windowing_local = windowing, lock_windowing);
+		fft_audio_compute_fft(windowing_local);
 
 		ret = fft_audio_load_next_window();
 		if (ret == FFT_AUDIO_EOF) {
@@ -364,6 +373,21 @@ void draw_bubbles_info()
 				  "Bubbles: %zu", active_bubbles_local);
 }
 
+void draw_windowing_info()
+{
+	int windowing_local;
+
+	EXP_LOCK(windowing_local = windowing, lock_windowing);
+	fft_audio_get_windowing_name(windowing_local);
+
+	allegro_blender_mode_standard();
+	al_draw_textf(font_big, font_color,
+				  WINDOWING_INFO_X, WINDOWING_INFO_Y,
+				  WINDOWING_INFO_TEXT_ALIGN,
+				  "Windowing: %s",
+				  fft_audio_get_windowing_name(windowing_local));
+}
+
 void draw_timer_info()
 {
 	size_t time_ms;
@@ -453,6 +477,7 @@ void * task_display(void * arg)
 
 		draw_trails();
 		draw_bubbles_info();
+		draw_windowing_info();
 		draw_timer_info();
 		draw_gain_info();
 		draw_user_info();
@@ -480,6 +505,7 @@ void update_gain(size_t val)
 void * task_input(void * arg)
 {
 	const int id = ptask_id(arg);
+	size_t i;
 	ALLEGRO_EVENT event;
 	int done_local = 0;
 	int keys[ALLEGRO_KEY_MAX];
@@ -545,6 +571,15 @@ void * task_input(void * arg)
 			MUTEX_UNLOCK(lock_gain);
 		}
 
+		// Reading numbers from 1 to 7
+		for (i = ALLEGRO_KEY_1; i < ALLEGRO_KEY_8; ++i) {
+			if (keys[i]) {
+				MUTEX_LOCK(lock_windowing);
+				windowing = i - ALLEGRO_KEY_0 - 1;
+				MUTEX_UNLOCK(lock_windowing);
+			}
+		}
+
 		if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
 			keys[event.keyboard.keycode] = 1;
 		}
@@ -580,6 +615,7 @@ int main(int argc, char * argv[])
 	pthread_cond_init(&cond_fft_consumers, NULL);
 	pthread_mutex_init(&lock_fft, NULL);
 	pthread_mutex_init(&lock_gain, NULL);
+	pthread_mutex_init(&lock_windowing, NULL);
 
 	done = 0;
 	var_fft = 0;
@@ -587,6 +623,7 @@ int main(int argc, char * argv[])
 	bubble_scale = BUBBLE_SCALE_BASE;
 	audio_time_ms = 0;
 	gain = GAIN_BASE;
+	windowing = fft_audio_rectangular;
 	memset(audio_filename, 0, FILENAME_SIZE);
 
 	if (argc < 2) {
@@ -655,6 +692,7 @@ int main(int argc, char * argv[])
 	pthread_mutex_destroy(&lock_fft);
 
 	pthread_mutex_destroy(&lock_gain);
+	pthread_mutex_destroy(&lock_windowing);
 
 	btrails_free();
 	fft_audio_free();

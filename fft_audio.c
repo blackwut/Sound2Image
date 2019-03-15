@@ -43,7 +43,22 @@ typedef struct {
 	size_t channels;
 	size_t frames;
 	size_t window_elements;
+	enum fft_audio_window windowing;
 } fft_audio;
+
+
+//------------------------------------------------------------------------------
+// FFT_AUDIO LOCAL DATA
+//------------------------------------------------------------------------------
+static char * windowing_names[] = {
+	"Rectangular",
+	"Welch",
+	"Triangular",
+	"Barlett",
+	"Hanning",
+	"Hamming",
+	"Blackman"
+};
 
 static fft_audio audio;
 
@@ -263,6 +278,7 @@ int fft_audio_init(const char filename[],
 	audio.frames			= info.frames;
 	audio.window_elements	= window_elements;
 
+	audio.windowing = windowing;
 	fft_audio_fill_window_data(windowing);
 
 	audio.plan = fftwf_plan_dft_1d(window_elements,
@@ -292,6 +308,19 @@ size_t fft_audio_get_samplerate()
 size_t fft_audio_get_channels()
 {
 	return audio.channels;
+}
+
+//------------------------------------------------------------------------------
+//
+// This function returns the string name of the provided windowing.
+//
+//------------------------------------------------------------------------------
+char * fft_audio_get_windowing_name(enum fft_audio_window windowing)
+{
+	assert(fft_audio_rectangular <= windowing);
+	assert(windowing <= fft_audio_blackman);
+
+	return windowing_names[windowing];
 }
 
 //------------------------------------------------------------------------------
@@ -357,11 +386,19 @@ int fft_audio_load_next_window()
 
 //------------------------------------------------------------------------------
 //
-// This function computes the FFT of the current window values.
+// This function computes the FFT of the current window values applying the 
+// windowing method provided.
 //
 //------------------------------------------------------------------------------
-void fft_audio_compute_fft()
+void fft_audio_compute_fft(enum fft_audio_window windowing)
 {
+	assert(fft_audio_rectangular <= windowing);
+	assert(windowing <= fft_audio_blackman);
+
+	if (audio.windowing != windowing) {
+		audio.windowing = windowing;
+		fft_audio_fill_window_data(windowing);
+	}
 	fftwf_execute(audio.plan);
 }
 

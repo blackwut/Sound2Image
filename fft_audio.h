@@ -24,7 +24,7 @@
 // FFT_AUDIO GLOBAL ENUMS DECLARATION
 //------------------------------------------------------------------------------
 enum fft_audio_window {
-	fft_audio_rectangular,
+	fft_audio_rectangular = 0,
 	fft_audio_welch,
 	fft_audio_triangular,
 	fft_audio_barlett,
@@ -92,6 +92,21 @@ size_t fft_audio_get_channels();
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
+// This function returns the string name of the provided windowing.
+//
+// PARAMETERS
+// windowing: the windowing enum value whose name you want to know
+//
+// RETURN
+// The string name of the provided windowing
+//
+//------------------------------------------------------------------------------
+char * fft_audio_get_windowing_name(enum fft_audio_window windowing);
+
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
 // This function loads the next window values from the provided audio file.
 //
 // RETURN
@@ -101,13 +116,18 @@ size_t fft_audio_get_channels();
 //------------------------------------------------------------------------------
 int fft_audio_load_next_window();
 
+
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function computes the FFT of the current window values.
+// This function computes the FFT of the current window values applying the 
+// windowing method provided.
+//
+// PARAMETERS
+// windowing: the type of window to be applied
 //
 //------------------------------------------------------------------------------
-void fft_audio_compute_fft();
+void fft_audio_compute_fft(enum fft_audio_window windowing);
 
 
 //------------------------------------------------------------------------------
