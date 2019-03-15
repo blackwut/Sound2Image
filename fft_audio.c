@@ -7,7 +7,6 @@
 #include <string.h>
 #include "common.h"
 
-
 //------------------------------------------------------------------------------
 // FFT_AUDIO LOCAL CONSTANTS
 //------------------------------------------------------------------------------
@@ -48,6 +47,13 @@ typedef struct {
 
 static fft_audio audio;
 
+//------------------------------------------------------------------------------
+//
+// This function calculates and stores the rectangular window data.
+// Each element is calculated as follow:
+// w[i] = 1
+//
+//------------------------------------------------------------------------------
 static void fft_audio_fill_window_data_rectangular()
 {
 	size_t i;
@@ -58,6 +64,13 @@ static void fft_audio_fill_window_data_rectangular()
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function calculates and stores the "Welch" window data.
+// Each element is calculated as follow:
+// w[i] = 1 - [(i - 0.5 * (N - 1)) / (0.5 * (N + 1))] ^ 2
+//
+//------------------------------------------------------------------------------
 static void fft_audio_fill_window_data_welch()
 {
 	size_t i;
@@ -70,6 +83,13 @@ static void fft_audio_fill_window_data_welch()
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function calculates and stores the "Triangular" window data.
+// Each element is calculated as follow:
+// w[i] = (2 / N) * [(N / 2) - |i - (N / 2)|]
+//
+//------------------------------------------------------------------------------
 static void fft_audio_fill_window_data_triangular()
 {
 	size_t i;
@@ -81,6 +101,13 @@ static void fft_audio_fill_window_data_triangular()
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function calculates and stores the "Barlett" window data.
+// Each element is calculated as follow:
+// w[i] = [2 / (N - 1)] * [(N - 1) / 2 - |i - (N - 1) / 2|]
+//
+//------------------------------------------------------------------------------
 static void fft_audio_fill_window_data_barlett()
 {
 	size_t i;
@@ -92,6 +119,13 @@ static void fft_audio_fill_window_data_barlett()
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function calculates and stores the "Hanning" window data.
+// Each element is calculated as follow:
+// w[i] = 0.5 * [1 - cos( (2 * pi * i) / (N - 1) )]
+//
+//------------------------------------------------------------------------------
 static void fft_audio_fill_window_data_hanning()
 {
 	size_t i;
@@ -104,6 +138,15 @@ static void fft_audio_fill_window_data_hanning()
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function calculates and stores the "Hamming" window data.
+// Each element is calculated as follow:
+// a = 0.53836
+// b = 0.46164
+// w[i] = a - b * cos( (2 * pi * i) / (N - 1) )
+//
+//------------------------------------------------------------------------------
 static void fft_audio_fill_window_data_hamming()
 {
 	size_t i;
@@ -116,6 +159,16 @@ static void fft_audio_fill_window_data_hamming()
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function calculates and stores the "Blackman" window data.
+// Each element is calculated as follow:
+// a = 0.42
+// b = 0.5
+// c = 0.08
+// w[i] = a - b * cos( (2 * pi * i) / (N - 1) + c * cos( (4 * pi * i) / (N - 1)
+//
+//------------------------------------------------------------------------------
 static void fft_audio_fill_window_data_blackman()
 {
 	size_t i;
@@ -126,10 +179,16 @@ static void fft_audio_fill_window_data_blackman()
 	for (i = 0; i < N; ++i) {
 		val_one = cosf(2 * M_PI * i / (N - 1));
 		val_two = cosf(4 * M_PI * i / (N - 1));
-		audio.window_data[i] = 0.42f - 0.5f * val_one + 0.8f * val_two;
+		audio.window_data[i] = 0.42f - 0.5f * val_one + 0.08f * val_two;
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function is a help function that allows to call the proper windowing
+// function that calculates and stores the window data.
+//
+//------------------------------------------------------------------------------
 static void fft_audio_fill_window_data(const enum fft_audio_window windowing)
 {
 
@@ -161,6 +220,15 @@ static void fft_audio_fill_window_data(const enum fft_audio_window windowing)
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function initialize alla data required to perform the FFT and extract
+// some statistics from an audio file.
+// It opens the file provided, initializes the audio data, the data needed to
+// perform the FFT with FFTW library, calculates and stores the window data
+// needed to perform the windowing in order to suppress leakage.
+//
+//------------------------------------------------------------------------------
 int fft_audio_init(const char filename[],
 				   const size_t window_elements,
 				   const enum fft_audio_window windowing)
@@ -206,16 +274,33 @@ int fft_audio_init(const char filename[],
 	return FFT_AUDIO_SUCCESS;
 }
 
+//------------------------------------------------------------------------------
+//
+// This function returns the samplerate of the provided audio file.
+//
+//------------------------------------------------------------------------------
 size_t fft_audio_get_samplerate()
 {
 	return audio.samplerate;
 }
 
+//------------------------------------------------------------------------------
+//
+// This function returns the number of channels of the provided audio file.
+//
+//------------------------------------------------------------------------------
 size_t fft_audio_get_channels()
 {
 	return audio.channels;
 }
 
+//------------------------------------------------------------------------------
+//
+// This function is a help function that allows to read the audio data not read
+// yet. It also performs the numeric normalization and applies the window to the
+// signal in order to calculate the FFT.
+//
+//------------------------------------------------------------------------------
 static int fft_audio_read_data(const size_t data_size)
 {
 	size_t readcount;
@@ -253,6 +338,11 @@ static int fft_audio_read_data(const size_t data_size)
 	return FFT_AUDIO_SUCCESS;
 }
 
+//------------------------------------------------------------------------------
+//
+// This function loads the next window values from the provided audio file.
+//
+//------------------------------------------------------------------------------
 int fft_audio_load_next_window()
 {
 	int ret;
@@ -265,11 +355,21 @@ int fft_audio_load_next_window()
 	return FFT_AUDIO_SUCCESS;
 }
 
+//------------------------------------------------------------------------------
+//
+// This function computes the FFT of the current window values.
+//
+//------------------------------------------------------------------------------
 void fft_audio_compute_fft()
 {
 	fftwf_execute(audio.plan);
 }
 
+//------------------------------------------------------------------------------
+//
+// This function fill the provided "buffer" with current window audio values.
+//
+//------------------------------------------------------------------------------
 void fft_audio_fill_buffer_data(float * buffer)
 {
 	size_t i;
@@ -281,11 +381,23 @@ void fft_audio_fill_buffer_data(float * buffer)
 	}
 }
 
+//------------------------------------------------------------------------------
+//
+// This function returns the statistics of the current FFT audio window.
+//
+//------------------------------------------------------------------------------
 fft_audio_stats fft_audio_get_stats()
 {
 	return fft_audio_get_stats_samples(1, audio.window_elements);
 }
 
+//------------------------------------------------------------------------------
+//
+// This function returns the statistics of the FFT audio in the range of samples
+// [from, to]. It calculates the minimum, average and maximum magnitude of each
+// sample of the FFT in the current window.
+//
+//------------------------------------------------------------------------------
 fft_audio_stats fft_audio_get_stats_samples(const size_t from,
 											const size_t to)
 {
@@ -320,6 +432,11 @@ fft_audio_stats fft_audio_get_stats_samples(const size_t from,
 	return stats;
 }
 
+//------------------------------------------------------------------------------
+//
+// This function frees all data and data structures used for the computation.
+//
+//------------------------------------------------------------------------------
 void fft_audio_free()
 {
 	if (audio.file != NULL) {

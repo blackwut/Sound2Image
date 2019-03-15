@@ -157,9 +157,10 @@ fft_audio_stats fft_audio_get_stats_samples(const size_t from,
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function frees all data needed for the computation.
+// This function frees all data and data structures used for the computation.
 //
 //------------------------------------------------------------------------------
 void fft_audio_free();
+
 
 #endif
