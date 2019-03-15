@@ -81,7 +81,7 @@ pthread_mutex_t lock_gain;
 size_t gain;
 
 pthread_mutex_t lock_windowing;
-enum fft_audio_window windowing;
+enum fft_audio_windowing windowing;
 
 ALLEGRO_AUDIO_STREAM * stream;
 
@@ -172,7 +172,7 @@ void * task_fft(void * arg)
 		EXP_LOCK(windowing_local = windowing, lock_windowing);
 		fft_audio_compute_fft(windowing_local);
 
-		ret = fft_audio_load_next_window();
+		ret = fft_audio_load_next_frame();
 		if (ret == FFT_AUDIO_EOF) {
 			EXP_LOCK(done = 1, lock_done);
 		}
@@ -633,8 +633,9 @@ int main(int argc, char * argv[])
 	strncpy(audio_filename, argv[1], FILENAME_SIZE);
 	
 	ret = fft_audio_init(audio_filename, FRAGMENT_SAMPLES, fft_audio_hamming);
-	if (ret == FFT_AUDIO_ERROR_OPEN_FILE) {
-		printf("Cannot open file %s\n", audio_filename);
+	if (ret != FFT_AUDIO_SUCCESS) {
+		printf("ERROR - Audio file does not exits or is not compatible (%d)\n",
+			   ret);
 		exit(EXIT_OPEN_FILE);
 	}
 	samplerate = fft_audio_get_samplerate();
