@@ -6,14 +6,14 @@ Sound2Image is a music visualizer Real-Time System project.
 - FFTW (http://fftw.org)
 - libsndfile (http://www.mega-nerd.com/libsndfile)
 
-##macOS
+## macOS
 ```bash
 brew install allegro
 brew install fftw --without-fortran
 brew install libsndfile 
 ```
 
-##Ubuntu
+## Ubuntu
 ```bash
 sudo apt install liballegro5-dev
 sudo apt install fftw-dev
