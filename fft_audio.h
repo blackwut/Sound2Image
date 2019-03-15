@@ -1,6 +1,7 @@
 //------------------------------------------------------------------------------
 //
 // FFT_AUDIO
+//
 // LIBRARY TO SIMPLIFY THE LOADING OF AN AUDIO FILE AND THE COMPUTATION OF THE 
 // FAST FOURIER TRANSFORM ON IT IN A WINDOWED FASHION.
 //
@@ -16,14 +17,16 @@
 // FFT_AUDIO GLOBAL CONSTANTS
 //------------------------------------------------------------------------------
 #define FFT_AUDIO_SUCCESS				0
-#define FFT_AUDIO_ERROR_OPEN_FILE		1
-#define FFT_AUDIO_EOF					2
+#define FFT_AUDIO_ERROR_FILE			1
+#define FFT_AUDIO_ERROR_SAMPLERATE		2
+#define FFT_AUDIO_ERROR_CHANNELS		3
+#define FFT_AUDIO_EOF					4
 
 
 //------------------------------------------------------------------------------
 // FFT_AUDIO GLOBAL ENUMS DECLARATION
 //------------------------------------------------------------------------------
-enum fft_audio_window {
+enum fft_audio_windowing {
 	fft_audio_rectangular = 0,
 	fft_audio_welch,
 	fft_audio_triangular,
@@ -47,23 +50,25 @@ typedef struct fft_audio_stats {
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function initializes all data required to perform the FFT and extract
-// some statistics from an audio file.
+// This function initializes all data required to perform the FFT and to extract
+// statistics from an audio file in a sliding frame fashion.
 //
 // PARAMETERS
 // filename: the path of the audio file
-// window_elements: the number of elements to be computed on each window
-// windowing: the type of window to be applied
+// frame_elements: the number of elements to be computed on each frame
+// windowing: the type of windowing to be applied
 //
 // RETURN
-// If the file does not exists or it is not accessible, this functions returns
-// FFT_AUDIO_ERROR_OPEN_FILE.
-// Otherwhise it returns FFT_AUDIO_SUCCESS.
+// It returns:
+// - FFT_AUDIO_ERROR_FILE if the file does not exists or is not accessibile.
+// - FFT_AUDIO_ERROR_SAMPLERATE if audio samplerate is greather than 44100
+// - FFT_AUDIO_ERROR_CHANNELS if audio channels are more than 2
+// - FFT_AUDIO_SUCCESS wtherwhise
 //
 //------------------------------------------------------------------------------
 int fft_audio_init(const char filename[],
-				   const size_t window_elements,
-				   const enum fft_audio_window windowing);
+				   const size_t frame_elements,
+				   const enum fft_audio_windowing windowing);
 
 //------------------------------------------------------------------------------
 //
@@ -101,42 +106,42 @@ size_t fft_audio_get_channels();
 // The string name of the provided windowing
 //
 //------------------------------------------------------------------------------
-char * fft_audio_get_windowing_name(enum fft_audio_window windowing);
+char * fft_audio_get_windowing_name(enum fft_audio_windowing windowing);
 
 
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function loads the next window values from the provided audio file.
+// This function loads the next frame values from the provided audio file.
 //
 // RETURN
 // If there is no data left, it returns FFT_AUDIO_EOF.
 // Otherwise it returns FFT_AUDIO_SUCCESS.
 //
 //------------------------------------------------------------------------------
-int fft_audio_load_next_window();
+int fft_audio_load_next_frame();
 
 
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function computes the FFT of the current window values applying the 
+// This function computes the FFT of the current frame values applying the 
 // windowing method provided.
 //
 // PARAMETERS
 // windowing: the type of window to be applied
 //
 //------------------------------------------------------------------------------
-void fft_audio_compute_fft(enum fft_audio_window windowing);
+void fft_audio_compute_fft(enum fft_audio_windowing windowing);
 
 
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function fill the provided "buffer" with current window audio values.
+// This function fill the provided "buffer" with current frame audio values.
 //
 // PARAMETERS
-// buffer: a float buffer of size (window_elements * channels)
+// buffer: a float buffer of size (frame_elements * channels)
 //
 //------------------------------------------------------------------------------
 void fft_audio_fill_buffer_data(float * buffer);
@@ -145,12 +150,12 @@ void fft_audio_fill_buffer_data(float * buffer);
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function returns the statistics of the current FFT audio window.
+// This function returns the statistics of the current FFT audio frame values.
 //
 //
 // RETURN
-// The statistics of the current FFT audio window. The statistics contains the
-// minimum, average and maximum magnitude of the FFT.
+// The statistics of the current FFT audio frame values. The statistics contains
+// the minimum, average and maximum magnitude of the FFT.
 //
 //------------------------------------------------------------------------------
 fft_audio_stats fft_audio_get_stats();
@@ -177,7 +182,7 @@ fft_audio_stats fft_audio_get_stats_samples(const size_t from,
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function frees all data and data structures used for the computation.
+// This function frees all data and data structures used.
 //
 //------------------------------------------------------------------------------
 void fft_audio_free();
