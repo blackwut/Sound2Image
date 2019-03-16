@@ -7,13 +7,11 @@
 // BTRAILS LOCAL STRUCT DEFINITIONS
 //------------------------------------------------------------------------------
 typedef struct {
-	bpoint pos[MAX_BELEMS];		// (x, y) bubble coordinates of the trail
-
-	size_t top;					// Index of the last bubble coordinates enqueued
-	bcolor color;				// RGB color of the bubbles in the trail
-	size_t freq;				// Frequency assigned to the trail
-
-	pthread_mutex_t lock;		// Lock to protect the trail
+	btrail_point pos[MAX_BELEMS];	// (x, y) bubble coordinates of the trail
+	size_t top;						// Last bubble coordinates index enqueued
+	size_t freq;					// Frequency assigned to the trail
+	btrail_color color;				// RGB color of the bubbles in the trail
+	pthread_mutex_t lock;			// Mutex to protect the trail
 } btrail;
 
 
@@ -58,6 +56,21 @@ int btrails_init()
 
 //------------------------------------------------------------------------------
 //
+// This function returns a "btrail_point" containing the coordinates (x, y) of the 
+// "bubble_id" bubble in the specified "trail_id" trail.
+//
+//------------------------------------------------------------------------------
+btrail_point btrails_get_bubble_pos(const size_t trail_id,
+									const size_t bubble_id)
+{
+	assert(trail_id < MAX_BTRAILS);
+	assert(bubble_id < MAX_BELEMS);
+	return trails[trail_id].pos[bubble_id];
+}
+
+
+//------------------------------------------------------------------------------
+//
 // This function returns the index of the last bubble enqueued into the
 // specified "trail_id" trail.
 //
@@ -71,34 +84,6 @@ size_t btrails_get_top(const size_t trail_id)
 
 //------------------------------------------------------------------------------
 //
-// This function returns a "bpoint" containing the coordinates (x, y) of the 
-// "bubble_id" bubble in the specified "trail_id" trail.
-//
-//------------------------------------------------------------------------------
-bpoint btrails_get_bubble_pos(const size_t trail_id,
-							  const size_t bubble_id)
-{
-	assert(trail_id < MAX_BTRAILS);
-	assert(bubble_id < MAX_BELEMS);
-	return trails[trail_id].pos[bubble_id];
-}
-
-
-//------------------------------------------------------------------------------
-//
-// This function returns a "bcolor" containing the red, green and blue color
-// channels of a the specified "trail_id" trail.
-//
-//------------------------------------------------------------------------------
-bcolor btrails_get_color(const size_t trail_id)
-{
-	assert(trail_id < MAX_BTRAILS);
-	return trails[trail_id].color;
-}
-
-
-//------------------------------------------------------------------------------
-//
 // This function returns the frequency assigned to the "trail_id" trail.
 //
 //------------------------------------------------------------------------------
@@ -106,6 +91,19 @@ size_t btrails_get_freq(const size_t trail_id)
 {
 	assert(trail_id < MAX_BTRAILS);
 	return trails[trail_id].freq;
+}
+
+
+//------------------------------------------------------------------------------
+//
+// This function returns a "btrail_color" containing the red, green and blue color
+// channels of a the specified "trail_id" trail.
+//
+//------------------------------------------------------------------------------
+btrail_color btrails_get_color(const size_t trail_id)
+{
+	assert(trail_id < MAX_BTRAILS);
+	return trails[trail_id].color;
 }
 
 
@@ -132,6 +130,19 @@ void btrails_put_bubble_pos(const size_t trail_id,
 
 //------------------------------------------------------------------------------
 //
+// This function assigns the frequency to the "trail_id" trail
+//
+//------------------------------------------------------------------------------
+void btrails_set_freq(const size_t trail_id,
+					  const size_t freq)
+{
+	assert(trail_id < MAX_BTRAILS);
+	trails[trail_id].freq = freq;
+}
+
+
+//------------------------------------------------------------------------------
+//
 // This function assigns the red, green and blue color channels to the
 // "trail_id" trail.
 //
@@ -142,23 +153,9 @@ void btrails_set_color(const size_t trail_id,
 					   const unsigned char blue)
 {
 	assert(trail_id < MAX_BTRAILS);
-
 	trails[trail_id].color.red = red;
 	trails[trail_id].color.green = green;
 	trails[trail_id].color.blue = blue;
-}
-
-
-//------------------------------------------------------------------------------
-//
-// This function assigns the frequency to the "trail_id" trail
-//
-//------------------------------------------------------------------------------
-void btrails_set_freq(const size_t trail_id,
-					  const size_t freq)
-{
-	assert(trail_id < MAX_BTRAILS);
-	trails[trail_id].freq = freq;
 }
 
 

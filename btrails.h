@@ -39,13 +39,14 @@
 typedef struct {
 	float x;
 	float y;
-} bpoint;
+} btrail_point;
 
 typedef struct {
 	unsigned char red;
 	unsigned char green;
 	unsigned char blue;
-} bcolor;
+} btrail_color;
+
 
 //------------------------------------------------------------------------------
 //
@@ -64,6 +65,24 @@ int btrails_init();
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
+// This function returns a "btrail_point" containing the coordinates (x, y) of
+// the "bubble_id" bubble in the specified "trail_id" trail.
+//
+// PARAMETERS
+// trail_id: the id of the trail
+// bubble_id: the id of the bubble in the specified trail
+//
+// RETURN
+// The "btrail_point" of the specified bubble in the trail
+//
+//------------------------------------------------------------------------------
+btrail_point btrails_get_bubble_pos(const size_t trail_id,
+									const size_t bubble_id);
+
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
 // This function returns the index of the last bubble enqueued into the
 // specified "trail_id" trail.
 //
@@ -75,39 +94,6 @@ int btrails_init();
 //
 //------------------------------------------------------------------------------
 size_t btrails_get_top(const size_t trail_id);
-
-//------------------------------------------------------------------------------
-//
-// DESCRIPTION
-// This function returns a "bpoint" containing the coordinates (x, y) of the 
-// "bubble_id" bubble in the specified "trail_id" trail.
-//
-// PARAMETERS
-// trail_id: the id of the trail
-// bubble_id: the id of the bubble in the specified trail
-//
-// RETURN
-// The "bpoint" of the specified bubble in the trail
-//
-//------------------------------------------------------------------------------
-bpoint btrails_get_bubble_pos(const size_t trail_id,
-							  const size_t bubble_id);
-
-
-//------------------------------------------------------------------------------
-//
-// DESCRIPTION
-// This function returns a "bcolor" containing the red, green and blue color
-// channels of a the specified "trail_id" trail.
-//
-// PARAMETERS
-// trail_id: the id of the trail
-//
-// RETURN
-// The "bcolor" of the specified trail
-//
-//------------------------------------------------------------------------------
-bcolor btrails_get_color(const size_t trail_id);
 
 
 //------------------------------------------------------------------------------
@@ -123,6 +109,22 @@ bcolor btrails_get_color(const size_t trail_id);
 //
 //------------------------------------------------------------------------------
 size_t btrails_get_freq(const size_t trail_id);
+
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function returns a "btrail_color" containing the red, green and blue
+// color channels of a the specified "trail_id" trail.
+//
+// PARAMETERS
+// trail_id: the id of the trail
+//
+// RETURN
+// The "btrail_color" of the specified trail
+//
+//------------------------------------------------------------------------------
+btrail_color btrails_get_color(const size_t trail_id);
 
 
 //------------------------------------------------------------------------------
@@ -145,6 +147,20 @@ void btrails_put_bubble_pos(const size_t trail_id,
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
+// This function assigns the frequency to the "trail_id" trail
+//
+// PARAMETERS
+// trail_id: the id of the trail
+// freq: the frequency value to be assigned
+//
+//------------------------------------------------------------------------------
+void btrails_set_freq(const size_t trail_id,
+					  const size_t freq);
+
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
 // This function assigns the red, green and blue color channels to the
 // "trail_id" trail.
 //
@@ -159,20 +175,6 @@ void btrails_set_color(const size_t trail_id,
 					   const unsigned char red,
 					   const unsigned char green,
 					   const unsigned char blue);
-
-
-//------------------------------------------------------------------------------
-//
-// DESCRIPTION
-// This function assigns the frequency to the "trail_id" trail
-//
-// PARAMETERS
-// trail_id: the id of the trail
-// freq: the frequency value to be assigned
-//
-//------------------------------------------------------------------------------
-void btrails_set_freq(const size_t trail_id,
-					  const size_t freq);
 
 
 //------------------------------------------------------------------------------
