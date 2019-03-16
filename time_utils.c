@@ -20,7 +20,7 @@ int time_now(struct timespec * t)
 void time_copy(struct timespec * td,
 			   const struct timespec ts)
 {
-	td->tv_sec  = ts.tv_sec;
+	td->tv_sec = ts.tv_sec;
 	td->tv_nsec = ts.tv_nsec;
 }
 

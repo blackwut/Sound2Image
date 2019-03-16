@@ -139,6 +139,7 @@ int ptask_deadline_miss(const size_t id)
 		tp[id].deadline_misses++;
 		return PTASK_DEADLINE_MISS;
 	}
+
 	return PTASK_SUCCESS;
 }
 
