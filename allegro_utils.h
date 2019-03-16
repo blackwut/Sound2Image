@@ -25,7 +25,7 @@ ALLEGRO_FONT * font_small = NULL;
 ALLEGRO_COLOR font_color;
 ALLEGRO_EVENT_QUEUE * input_queue = NULL;
 
-static inline void al_check(bool test, const char * description)
+static inline void allegro_check(bool test, const char * description)
 {
     if (test) return;
     DLOG("ERROR - %s\n", description);
@@ -34,7 +34,7 @@ static inline void al_check(bool test, const char * description)
 
 static inline void allegro_init()
 {
-    al_check(al_init(), "al_init()");
+    allegro_check(al_init(), "al_init()");
 
     al_set_new_window_title(WINDOW_TITLE);
 
@@ -43,33 +43,33 @@ static inline void allegro_init()
     al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
     al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR | ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
     display = al_create_display(DISPLAY_W, DISPLAY_H);
-    al_check(display, "al_create_display()");
+    allegro_check(display, "al_create_display()");
     BACKGROUND_COLOR = al_map_rgba(32, 32, 32, 255);
 
     // Keyboard
-    al_check(al_install_keyboard(), "al_install_keyboard()");
+    allegro_check(al_install_keyboard(), "al_install_keyboard()");
 
     // Input queue
     input_queue = al_create_event_queue();
-    al_check(input_queue, "al_create_event_queue()");
+    allegro_check(input_queue, "al_create_event_queue()");
     al_register_event_source(input_queue, al_get_display_event_source(display));
     al_register_event_source(input_queue, al_get_keyboard_event_source());
 
     // Audio
     al_init_acodec_addon();
-    al_check(al_install_audio(), "al_install_audio()");
-    al_check(al_reserve_samples(0), "al_reserve_samples()");
+    allegro_check(al_install_audio(), "al_install_audio()");
+    allegro_check(al_reserve_samples(0), "al_reserve_samples()");
 
     // Font
-    al_check(al_init_font_addon(), "al_init_font_addon()");
-    al_check(al_init_ttf_addon(), "al_init_ttf_addon()");
+    allegro_check(al_init_font_addon(), "al_init_font_addon()");
+    allegro_check(al_init_ttf_addon(), "al_init_ttf_addon()");
     font_big = al_load_ttf_font(FONT_NAME, FONT_SIZE_BIG, 0);
     font_small = al_load_ttf_font(FONT_NAME, FONT_SIZE_SMALL, 0);
     // font_color = al_map_rgba(41, 128, 185 , 255);
     font_color = al_map_rgba(192,  57,  43, 255);
 
     // Image
-    al_check(al_init_primitives_addon(), "al_init_primitives_addon()");
+    allegro_check(al_init_primitives_addon(), "al_init_primitives_addon()");
 }
 
 ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
