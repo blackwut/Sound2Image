@@ -12,8 +12,8 @@
 //------------------------------------------------------------------------------
 #define MAX_SAMPLERATE			44100
 #define MAX_CHANNELS			2
+#define MAX_FRAME_ELEMS			MAX_SAMPLERATE
 #define MAX_DATA_ELEMS			(MAX_CHANNELS * MAX_SAMPLERATE)
-#define MAX_WINDOWING_ELEMS		MAX_SAMPLERATE
 
 #define SILENCE_VALUE			0.0f
 #define NORM_VALUE				((float)0x8000)
@@ -34,8 +34,8 @@ typedef struct {
 	SNDFILE * file;								// Pointer to the audio file
 	float data[MAX_DATA_ELEMS];					// Float audio values
 	float windowing_data[MAX_DATA_ELEMS];		// Float windowing values
-	fftwf_complex fft_in[MAX_WINDOWING_ELEMS];	// Complex audio values
-	fftwf_complex fft_out[MAX_WINDOWING_ELEMS];	// Complex FFT values
+	fftwf_complex fft_in[MAX_FRAME_ELEMS];	// Complex audio values
+	fftwf_complex fft_out[MAX_FRAME_ELEMS];	// Complex FFT values
 
 	size_t samplerate;							// Samplerate of the audio file
 	size_t channels;							// Num. of channels of the audio
@@ -72,7 +72,7 @@ static fft_audio audio;
 static void fft_audio_fill_windowing_data_rectangular()
 {
 	size_t i;
-	size_t N = audio.frames_elements;
+	const size_t N = audio.frames_elements;
 
 	for (i = 0; i < N; ++i) {
 		audio.windowing_data[i] = 1.0f;
@@ -261,42 +261,35 @@ static void fft_audio_apply_window()
 
 //------------------------------------------------------------------------------
 //
-// This function is a help function that allows to load the audio data not  yet
+// This function is a help function that allows to load the audio data not yet
 // read. It also performs the numeric normalization of the audio signal needed
 // for the FFT execution.
 //
 //------------------------------------------------------------------------------
 static int fft_audio_read_data()
 {
-	size_t readcount;
+	size_t read_count;
 	size_t i;
 	size_t j;
 	size_t index;
-	float aux;
+	float sum;
 
-	assert(audio.frames_elements * audio.channels <= MAX_DATA_ELEMS);
-
-	readcount = sf_read_float(audio.file,
-							  audio.data,
-							  audio.frames_elements * audio.channels);
-	if (readcount == 0) {
+	read_count = sf_read_float(audio.file,
+							   audio.data,
+							   audio.frames_elements * audio.channels);
+	if (read_count == 0) {
 		return FFT_AUDIO_EOF;
 	}
 
-	for (i = 0; i < readcount / audio.channels; ++i) {
-		aux = 0.0f;
+	for (i = 0; i < audio.frames_elements; ++i) {
+		sum = 0.0f;
 		for (j = 0; j < audio.channels; ++j) {
 			index = i * audio.channels + j;
-			if (index < readcount) {
-				aux += audio.data[index];
+			if (index < read_count) {
+				sum += audio.data[index];
 			}
 		}
-		audio.fft_in[i][0] = aux;
-	}
-
-	// Set all remaining values to 0 if needed
-	for (i = readcount; i < audio.frames_elements; ++i) {
-		audio.fft_in[i][0] = 0.0f;
+		audio.fft_in[i][0] = sum * NORM_VALUE;
 	}
 
 	return FFT_AUDIO_SUCCESS;
@@ -319,7 +312,7 @@ int fft_audio_init(const char filename[],
 	SF_INFO info;
 
 	assert(filename != NULL);
-	assert(frames_elements <= MAX_WINDOWING_ELEMS);
+	assert(frames_elements <= MAX_FRAME_ELEMS);
 	assert(fft_audio_rectangular <= windowing);
 	assert(windowing <= fft_audio_blackman);
 
@@ -338,16 +331,16 @@ int fft_audio_init(const char filename[],
 		return FFT_AUDIO_ERROR_CHANNELS;
 	}
 
-	audio.samplerate		= info.samplerate;
-	audio.channels			= info.channels;
-	audio.frames_elements	= frames_elements;
-	audio.windowing 		= windowing;
+	audio.samplerate = info.samplerate;
+	audio.channels = info.channels;
+	audio.frames_elements = frames_elements;
+	audio.windowing = windowing;
 
 	for (i = 0 ; i < MAX_DATA_ELEMS; ++i) {
 		audio.data[i] = SILENCE_VALUE;
 	}
 
-	for (i = 0; i < MAX_WINDOWING_ELEMS; ++i) {
+	for (i = 0; i < MAX_FRAME_ELEMS; ++i) {
 		audio.fft_in[i][0] = SILENCE_VALUE;
 		audio.fft_in[i][1] = 0.0f;
 		audio.fft_out[i][0] = 0.0f;
@@ -462,7 +455,11 @@ void fft_audio_fill_buffer_data(float * buffer)
 //------------------------------------------------------------------------------
 fft_audio_stats fft_audio_get_stats()
 {
-	return fft_audio_get_stats_samples(1, audio.frames_elements);
+	fft_audio_range range;
+
+	range.from = 1;
+	range.to = audio.frames_elements;
+	return fft_audio_get_stats_samples(range);
 }
 
 
@@ -473,11 +470,9 @@ fft_audio_stats fft_audio_get_stats()
 // sample of the FFT in the current frame.
 //
 //------------------------------------------------------------------------------
-fft_audio_stats fft_audio_get_stats_samples(const size_t from,
-											const size_t to)
+fft_audio_stats fft_audio_get_stats_samples(const fft_audio_range range)
 {
 	size_t i;
-	size_t samples = to - from;
 	float real;
 	float imag;
 	float mag = 0.0f;
@@ -486,10 +481,10 @@ fft_audio_stats fft_audio_get_stats_samples(const size_t from,
 	float magMax = FLT_MIN;
 	fft_audio_stats stats;
 
-	assert(from <= audio.frames_elements);
-	assert(to <= audio.frames_elements);
+	assert(range.from <= audio.frames_elements);
+	assert(range.to <= audio.frames_elements);
 
-	for (i = from; i < to; ++i) {
+	for (i = range.from; i < range.to; ++i) {
 		real = audio.fft_out[i][0];
 		imag = audio.fft_out[i][1];
 
@@ -501,7 +496,7 @@ fft_audio_stats fft_audio_get_stats_samples(const size_t from,
 	}
 
 	stats.magMin = magMin;
-	stats.magAvg = magAvg / samples;
+	stats.magAvg = magAvg / (range.to - range.from);
 	stats.magMax = magMax;
 
 	return stats;

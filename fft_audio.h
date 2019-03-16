@@ -40,7 +40,12 @@ typedef enum {
 //------------------------------------------------------------------------------
 // FFT_AUDIO GLOBAL STRUCTURES DECLARATION
 //------------------------------------------------------------------------------
-typedef struct fft_audio_stats {
+typedef struct {
+	size_t from;
+	size_t to;
+} fft_audio_range;
+
+typedef struct {
 	float magMin;
 	float magAvg;
 	float magMax;
@@ -168,15 +173,13 @@ fft_audio_stats fft_audio_get_stats();
 // [from, to].
 //
 // PARAMETERS
-// from: the start sample position of the range
-// to: the end sample position of the range
+// range: the range [from, to] in which calculate the statistics
 //
 // RETURN
 // The statistics of the FFT audio in the range of samples [from, to]
 //
 //------------------------------------------------------------------------------
-fft_audio_stats fft_audio_get_stats_samples(const size_t from,
-											const size_t to);
+fft_audio_stats fft_audio_get_stats_samples(const fft_audio_range range);
 
 
 //------------------------------------------------------------------------------
