@@ -3,7 +3,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <assert.h>
-#include "common.h"
 #include "time_utils.h"
 
 //------------------------------------------------------------------------------

@@ -8,8 +8,6 @@
 #include <allegro5/allegro_ttf.h>
 #include <allegro5/allegro_primitives.h>
 
-#include "common.h"
-
 #define WINDOW_TITLE "Sound2Image - Alberto Ottimo"
 
 #define FONT_NAME "font/modum.ttf"
@@ -28,7 +26,7 @@ ALLEGRO_EVENT_QUEUE * input_queue = NULL;
 static inline void allegro_check(bool test, const char * description)
 {
     if (test) return;
-    DLOG("ERROR - %s\n", description);
+    fprintf(stderr, "ERROR - %s\n", description);
     exit(EXIT_ALLEGRO_ERROR);
 }
 
