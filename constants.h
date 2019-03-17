@@ -85,6 +85,15 @@
 #define GAIN_STEP					1
 
 
+#define EXIT_NO_FILENAME			128
+#define EXIT_OPEN_FILE				129
+#define EXIT_ALLEGRO_ERROR			130
+#define EXIT_PTASK_CREATE			131
+#define EXIT_PTASK_JOIN				132
+#define EXIT_BTRAILS_ERROR			133
+#define EXIT_FFT_AUDIO_ERROR		134
+
+
 #define MAX_COLORS 32
 const unsigned char colors[MAX_COLORS][3] = {
 	//Gray
