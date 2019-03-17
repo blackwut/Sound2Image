@@ -1,14 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h> 
+#include <allegro5/allegro.h>
+#include <allegro5/allegro_audio.h>
+#include <allegro5/allegro_acodec.h>
+#include <allegro5/allegro_primitives.h>
+#include <allegro5/allegro_font.h>
+#include <allegro5/allegro_ttf.h>
 #include <pthread.h>
 #include <math.h>
-#include "common.h"
 #include "constants.h"
-#include "fft_audio.h"
 #include "allegro_utils.h"
+#include "fft_audio.h"
+#include "btrails.h"
 #include "ptask.h"
 #include "time_utils.h"
-#include "btrails.h"
 
 
 //------------------------------------------------------------------------------
@@ -17,7 +22,7 @@
 #define MUTEX_LOCK(lock)	pthread_mutex_lock(&lock)	// Shorthand for lock
 #define MUTEX_UNLOCK(lock)	pthread_mutex_unlock(&lock)	// Shorthand for unlock
 
-// Shorthand for protect a small critical expr.
+// Shorthand for protect a small critical section
 #define MUTEX_EXP(expr, lock) \
 	MUTEX_LOCK(lock); \
 	expr; \
@@ -27,7 +32,27 @@
 //------------------------------------------------------------------------------
 // SOUND2IMAGE FUNCTION PROTOTYPES
 //------------------------------------------------------------------------------
-
+float bubble_spacing_with(size_t n);
+fft_audio_range bubble_samples_range(const size_t id,
+									 const size_t n);
+float bubble_calculate_val(const size_t id,
+						   const float val_old,
+						   const fft_audio_range range);
+void stream_set_gain(size_t val);
+void stream_fill_new_fragment();
+void draw_trail(const size_t id,
+				const float spacing,
+				const float scale);
+void draw_trails();
+void draw_bubbles_info();
+void draw_windowing_info();
+void draw_time_info();
+void draw_gain_info();
+void draw_user_info();
+void * task_fft(void * arg);
+void * task_bubble(void * arg);
+void * task_display(void * arg);
+void * task_input(void * arg);
 
 //------------------------------------------------------------------------------
 // SOUND2IMAGE GLOBAL DATA
@@ -62,6 +87,22 @@ size_t fft_counter;					// Variable to make synchronization
 //------------------------------------------------------------------------------
 // SOUND2IMAGE FUNCTION DEFINITIONS
 //------------------------------------------------------------------------------
+
+// void allegro_check(bool test, const char * description)
+// {
+//     if (test) return;
+//     fprintf(stderr, "ALLEGRO ERROR - %s\n", description);
+//     exit(EXIT_ALLEGRO_ERROR);
+// }
+
+void ptask_check(int ret, const char * description)
+{
+	if (ret == PTASK_SUCCESS) return;
+	fprintf(stderr, "PTASK ERROR - %s\n", description);
+
+	if (ret == PTASK_ERROR_CREATE) exit(EXIT_PTASK_CREATE);
+	if (ret == PTASK_ERROR_JOIN) exit(EXIT_PTASK_JOIN);
+}
 
 //------------------------------------------------------------------------------
 //
@@ -101,10 +142,11 @@ float bubble_spacing_with(size_t n)
 // The range [from, to] of samples for a given bubble.
 //
 //------------------------------------------------------------------------------
-fft_audio_range bubble_samples_range(const size_t id, const size_t n)
+fft_audio_range bubble_samples_range(const size_t id,
+									 const size_t n)
 {
-	fft_audio_range range;
 	float step;
+	fft_audio_range range;
 
 	step = log2f(FRAGMENT_SAMPLES / 2 - n) / (n + 1);
 	range.from = (size_t)lroundf(powf(2, (id + 1) * step)) + id + 1;
@@ -160,11 +202,26 @@ float bubble_calculate_val(const size_t id,
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
+// This function set the given gain to the stream audio.
+//
+// PARAMETERS
+// val: the value of the new gain to set
+//
+//------------------------------------------------------------------------------
+void stream_set_gain(size_t val)
+{
+	allegro_check(al_set_audio_stream_gain(stream, val / 100.0f),
+				  "al_set_audio_stream_gain()");
+}
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
 // This function copies the current frame audio values to a buffer provided by
 // the streaming object.
 //
 //------------------------------------------------------------------------------
-void fill_stream_fragment()
+void stream_fill_new_fragment()
 {
 	float * buffer = NULL;
 
@@ -174,12 +231,26 @@ void fill_stream_fragment()
 		allegro_check(al_set_audio_stream_fragment(stream, buffer),
 					  "al_set_audio_stream_fragment()");
 	} else {
-		DLOG("Fragment not inserted!\n", NULL);
+		fprintf(stderr, "Fragment not inserted!\n", NULL);
 	}
 }
 
-
-void draw_trail(const size_t id, const float spacing, const float scale)
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function draws the "id" bubble into the current bitmap/display. It has
+// the need of the current spacing between bubbles and the scale factor to draw
+// the bubble correctly.
+//
+// PARAMETERS
+// id: the bubble id to draw
+// spacing: the spacing between two bubbles
+// scale: the scale factor by which the bubble is drawn
+//
+//------------------------------------------------------------------------------
+void draw_trail(const size_t id,
+				const float spacing,
+				const float scale)
 {
 	size_t i;
 	size_t top;
@@ -344,7 +415,7 @@ void * task_fft(void * arg)
 		}
 
 		// Provide new values to the audio stream
-		fill_stream_fragment();
+		stream_fill_new_fragment();
 		// Update the elapsed audio time
 		MUTEX_EXP(time_ms += FRAGMENT_SAMPLES * 1000/ samplerate,
 				 mux_time_ms);
@@ -369,7 +440,7 @@ void * task_fft(void * arg)
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
-			DLOG("%d) deadline missed! woet: %zu ms\n",
+			fprintf(stderr, "%d) deadline missed! woet: %zu ms\n",
 				id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
@@ -443,7 +514,7 @@ void * task_bubble(void * arg)
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
-			DLOG("%d) deadline missed! woet: %zu ms\n",
+			fprintf(stderr, "%d) deadline missed! woet: %zu ms\n",
 				id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
@@ -482,19 +553,13 @@ void * task_display(void * arg)
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
-			DLOG("%d) deadline missed! woet: %zu ms\n",
+			fprintf(stderr, "%d) deadline missed! woet: %zu ms\n",
 				id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
 	}
 
 	return NULL;
-}
-
-void update_gain(size_t val)
-{
-	allegro_check(al_set_audio_stream_gain(stream, val / 100.0f),
-				  "al_set_audio_stream_gain()");
 }
 
 void * task_input(void * arg)
@@ -553,7 +618,7 @@ void * task_input(void * arg)
 			MUTEX_LOCK(mux_gain);
 			if (gain < GAIN_MAX) {
 				gain += GAIN_STEP;
-				update_gain(gain);
+				stream_set_gain(gain);
 			}
 			MUTEX_UNLOCK(mux_gain);
 		}
@@ -562,7 +627,7 @@ void * task_input(void * arg)
 			MUTEX_LOCK(mux_gain);
 			if (gain > GAIN_MIN) {
 				gain -= GAIN_STEP;
-				update_gain(gain);
+				stream_set_gain(gain);
 			}
 			MUTEX_UNLOCK(mux_gain);
 		}
@@ -587,7 +652,7 @@ void * task_input(void * arg)
 		MUTEX_EXP(done_local = done, mux_done);
 
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
-			DLOG("%d) deadline missed! woet: %zu ms\n",
+			fprintf(stderr, "%d) deadline missed! woet: %zu ms\n",
 				id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
@@ -623,15 +688,14 @@ int main(int argc, char * argv[])
 	memset(audio_filename, 0, FILENAME_SIZE);
 
 	if (argc < 2) {
-		printf("Please provide an audio filename.\n");
-		exit(EXIT_NO_FILENAME_PROVIDED);
+		fprintf(stderr, "Please provide an audio filename.\n");
+		exit(EXIT_NO_FILENAME);
 	}
 	strncpy(audio_filename, argv[1], FILENAME_SIZE);
 	
 	ret = fft_audio_init(audio_filename, FRAGMENT_SAMPLES, fft_audio_hamming);
 	if (ret != FFT_AUDIO_SUCCESS) {
-		printf("ERROR - Audio file does not exits or is not compatible (%d)\n",
-			   ret);
+		fprintf(stderr, "File does not exits or it is not compatible\n");
 		exit(EXIT_OPEN_FILE);
 	}
 	samplerate = fft_audio_get_samplerate();
@@ -646,7 +710,7 @@ int main(int argc, char * argv[])
 									ALLEGRO_AUDIO_DEPTH_FLOAT32,
 									allegro_channel_conf_with(channels));
 	al_set_audio_stream_playmode(stream, ALLEGRO_PLAYMODE_ONCE);
-	update_gain(gain);
+	stream_set_gain(gain);
 	allegro_check(al_attach_audio_stream_to_mixer(stream, 
 												  al_get_default_mixer()),
 				  "al_attach_audio_stream_to_mixer()");
@@ -659,25 +723,30 @@ int main(int argc, char * argv[])
 
 	// Tasks
 	for (int i = 0; i < BUBBLE_TASKS_MAX; ++i) {
-		ptask_create(task_bubble,
-					 TASK_BUBBLE_PERIOD,
-					 TASK_BUBBLE_DEADLINE,
-					 TASK_BUBBLE_PRIORITY);
+		ptask_check(ptask_create(task_bubble,
+								 TASK_BUBBLE_PERIOD,
+								 TASK_BUBBLE_DEADLINE,
+								 TASK_BUBBLE_PRIORITY),
+					"task_bubble");
 	}
 
-	ptask_create(task_fft,
-				 TASK_FFT_PERIOD,
-				 TASK_FFT_DEADLINE,
-				 TASK_FFT_PRIORITY);
-	ptask_create(task_input,
-				 TASK_INPUT_PERIOD,
-				 TASK_INPUT_DEADLINE,
-				 TASK_INPUT_PRIORITY);
-	ptask_create(task_display,
-				 TASK_DISPLAY_PERIOD,
-				 TASK_DISPLAY_DEADLINE,
-				 TASK_DISPLAY_PRIORITY);
-	ptask_wait_tasks();
+	ptask_check(ptask_create(task_fft,
+							 TASK_FFT_PERIOD,
+							 TASK_FFT_DEADLINE,
+							 TASK_FFT_PRIORITY),
+				"task_fft");
+	ptask_check(ptask_create(task_input,
+							 TASK_INPUT_PERIOD,
+							 TASK_INPUT_DEADLINE,
+							 TASK_INPUT_PRIORITY),
+				"task_input");
+	ptask_check(ptask_create(task_display,
+							 TASK_DISPLAY_PERIOD,
+							 TASK_DISPLAY_DEADLINE,
+							 TASK_DISPLAY_PRIORITY),
+				"task_display");
+	
+	ptask_check(ptask_wait_tasks(), "ptask_wait_tasks()");
 
 	// Free
 	pthread_mutex_destroy(&mux_active_tasks);
