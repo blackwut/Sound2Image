@@ -70,15 +70,13 @@ int ptask_create(void * (*task_handler)(void *),
 	sched.sched_priority = tp[id].priority;
 	pthread_attr_setschedparam(&attributes, &sched);
 	ret = pthread_create(&tid[id], &attributes, task_handler, (void *)(&tp[id]));
-
-	if (ret != 0) {
-		DLOG("ERROR - pthread_create() with code: %d\n", ret);
-		exit(EXIT_PTHREAD_CREATE);
-	}
-
 	pthread_attr_destroy(&attributes);
 
-	return id;
+	if (ret != 0) {
+		return PTASK_ERROR_CREATE;
+	}
+
+	return PTASK_SUCCESS;
 }
 
 
@@ -178,15 +176,15 @@ size_t ptask_get_woet_ms(const size_t id)
 // with EXIT_PTHREAD_JOIN value.
 //
 //------------------------------------------------------------------------------
-void ptask_wait_tasks()
+int ptask_wait_tasks()
 {
 	int ret;
 
 	for (int i = 0; i < task_count; ++i) {
 		ret = pthread_join(tid[i], NULL);
 		if (ret != 0) {
-			DLOG("ERROR - pthread_join with error code: %d\n", ret);
-			exit(EXIT_PTHREAD_JOIN);
+			return PTASK_ERROR_JOIN;
 		}
 	}
+	return PTASK_SUCCESS;
 }

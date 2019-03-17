@@ -17,6 +17,8 @@
 //------------------------------------------------------------------------------
 #define PTASK_SUCCESS		0
 #define PTASK_DEADLINE_MISS	1
+#define PTASK_ERROR_CREATE	2
+#define PTASK_ERROR_JOIN	3
 
 
 //------------------------------------------------------------------------------
@@ -32,11 +34,9 @@
 // priority: priority of the task. The value must be in the range [0, 99]
 //
 // RETURN
-// If the periodic task is created, it returns the id of the periodic task.
+// If an error occurred, it returns PTASK_ERROR_CREATE.
+// Otherwise it returns PTASK_SUCCESS.
 //
-// ERROR
-// If the periodic task can not be created, the program exits with
-// EXIT_PTHREAD_CREATE value.
 //
 //------------------------------------------------------------------------------
 int ptask_create(void * (*task_handler)(void *),
@@ -125,12 +125,12 @@ size_t ptask_get_woet_ms(const size_t id);
 // This function is a help function that provide a simple way to waits the
 // completation of all periodic tasks created in the program lifetime.
 //
-// ERROR
-// If the periodic task can not be joined for some reasons, the program exits
-// with EXIT_PTHREAD_JOIN value.
+// RETURN
+// If an error occurred, it returns PTASK_ERROR_JOIN.
+// Otherwise it returns PTASK_SUCCESS.
 //
 //------------------------------------------------------------------------------
-void ptask_wait_tasks();
+int ptask_wait_tasks();
 
 
 #endif
