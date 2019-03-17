@@ -9,7 +9,6 @@
 #include <pthread.h>
 #include <math.h>
 #include "constants.h"
-#include "allegro_utils.h"
 #include "fft_audio.h"
 #include "btrails.h"
 #include "ptask.h"
@@ -57,6 +56,12 @@ void * task_input(void * arg);
 //------------------------------------------------------------------------------
 // SOUND2IMAGE GLOBAL DATA
 //------------------------------------------------------------------------------
+ALLEGRO_DISPLAY * display;
+ALLEGRO_COLOR font_color;
+ALLEGRO_FONT * font_big;
+ALLEGRO_FONT * font_small;
+
+
 size_t samplerate;					// Samplerate of audio file.
 int done;							// If TRUE the program stops
 size_t active_tasks;				// Num. of tasks active
@@ -88,12 +93,12 @@ size_t fft_counter;					// Variable to make synchronization
 // SOUND2IMAGE FUNCTION DEFINITIONS
 //------------------------------------------------------------------------------
 
-// void allegro_check(bool test, const char * description)
-// {
-//     if (test) return;
-//     fprintf(stderr, "ALLEGRO ERROR - %s\n", description);
-//     exit(EXIT_ALLEGRO_ERROR);
-// }
+void allegro_check(bool test, const char * description)
+{
+	if (test) return;
+	fprintf(stderr, "ALLEGRO ERROR - %s\n", description);
+	exit(EXIT_ALLEGRO_ERROR);
+}
 
 void ptask_check(int ret, const char * description)
 {
@@ -102,6 +107,62 @@ void ptask_check(int ret, const char * description)
 
 	if (ret == PTASK_ERROR_CREATE) exit(EXIT_PTASK_CREATE);
 	if (ret == PTASK_ERROR_JOIN) exit(EXIT_PTASK_JOIN);
+}
+
+void allegro_init()
+{
+	allegro_check(al_init(), "al_init()");
+
+	al_set_new_window_title(WINDOW_TITLE);
+
+	// Display
+	al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
+	al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
+	al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR | ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
+	display = al_create_display(DISPLAY_W, DISPLAY_H);
+	allegro_check(display, "al_create_display()");
+
+	// Audio
+	al_init_acodec_addon();
+	allegro_check(al_install_audio(), "al_install_audio()");
+	allegro_check(al_reserve_samples(0), "al_reserve_samples()");
+
+	// Font
+	allegro_check(al_init_font_addon(), "al_init_font_addon()");
+	allegro_check(al_init_ttf_addon(), "al_init_ttf_addon()");
+	font_big = al_load_ttf_font(FONT_NAME, FONT_SIZE_BIG, 0);
+	font_small = al_load_ttf_font(FONT_NAME, FONT_SIZE_SMALL, 0);
+	// font_color = al_map_rgba(41, 128, 185 , 255);
+	font_color = al_map_rgba(192,  57,  43, 255);
+
+	// Primitives
+	allegro_check(al_init_primitives_addon(), "al_init_primitives_addon()");
+}
+
+ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
+{
+	return (channels == 2 ? ALLEGRO_CHANNEL_CONF_2 : ALLEGRO_CHANNEL_CONF_1);
+}
+
+void allegro_blender_mode_standard()
+{
+	al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
+}
+
+void allegro_blender_mode_alpha()
+{
+	al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
+}
+
+void allegro_free()
+{
+	al_uninstall_audio();
+	al_destroy_font(font_big);
+	al_destroy_font(font_small);
+	al_shutdown_ttf_addon();
+	al_shutdown_font_addon();
+	al_shutdown_primitives_addon();
+	al_destroy_display(display);
 }
 
 //------------------------------------------------------------------------------
@@ -529,6 +590,7 @@ void * task_display(void * arg)
 {
 	const int id = ptask_id(arg);		// id of this periodic task
 	int done_local = FALSE;					// local value of done
+	ALLEGRO_COLOR background_color = al_map_rgba(32, 32, 32, 255);
 
 	// Set the target buffer of drawing functions
 	al_set_target_backbuffer(display);
@@ -537,7 +599,7 @@ void * task_display(void * arg)
 
 	while (!done_local) {
 
-		al_clear_to_color(BACKGROUND_COLOR);
+		al_clear_to_color(background_color);
 
 		draw_trails();
 		draw_bubbles_info();
@@ -567,9 +629,15 @@ void * task_input(void * arg)
 	const int id = ptask_id(arg);
 	int done_local = FALSE;
 	size_t i;
+	ALLEGRO_EVENT_QUEUE * input_queue;
 	ALLEGRO_EVENT event;
 	int keys[ALLEGRO_KEY_MAX];
 
+	input_queue = al_create_event_queue();
+	allegro_check(input_queue, "al_create_event_queue()");
+	allegro_check(al_install_keyboard(), "al_install_keyboard()");
+	al_register_event_source(input_queue, al_get_display_event_source(display));
+	al_register_event_source(input_queue, al_get_keyboard_event_source());
 	memset(keys, 0, sizeof(keys));
 
 	ptask_activate(id);
@@ -657,6 +725,9 @@ void * task_input(void * arg)
 		}
 		ptask_wait_for_activation(id);
 	}
+
+	al_uninstall_keyboard();
+	al_destroy_event_queue(input_queue);
 
 	return NULL;
 }

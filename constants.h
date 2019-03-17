@@ -4,6 +4,11 @@
 #define FALSE						0
 #define TRUE						1
 
+#define WINDOW_TITLE "Sound2Image - Alberto Ottimo"
+#define FONT_NAME "font/modum.ttf"
+#define FONT_SIZE_BIG 20
+#define FONT_SIZE_SMALL 12
+
 #define FILENAME_SIZE				128
 #define BUBBLES_TEXT_SIZE			64
 #define TIMER_TEXT_SIZE				16
