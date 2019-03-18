@@ -116,6 +116,19 @@ size_t fft_counter;					// Variable to make synchronization
 //------------------------------------------------------------------------------
 // SOUND2IMAGE FUNCTION DEFINITIONS
 //------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function checks if a fft_audio function returned with an error. If an
+// error occurred, it prints an error message and exits with the corresponding
+// error value.
+//
+// PARAMETERS
+// ret: the return value of the fft_audio function
+// description: user error info description
+//
+//------------------------------------------------------------------------------
 void fft_audio_check(int ret,
 					 const char * description)
 {
