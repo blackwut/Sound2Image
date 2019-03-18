@@ -46,7 +46,7 @@ void allegro_check(bool test,
 void allegro_init();
 ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels);
 void allegro_stream_set_gain(size_t val);
-void allegro_stream_fill_new_fragment();
+int allegro_stream_fill_frame();
 void allegro_blender_mode_standard();
 void allegro_blender_mode_alpha();
 void allegro_free();
@@ -80,37 +80,37 @@ void * task_input(void * arg);
 //------------------------------------------------------------------------------
 // SOUND2IMAGE GLOBAL DATA
 //------------------------------------------------------------------------------
-ALLEGRO_DISPLAY * display;			// The main area of drawing
-ALLEGRO_EVENT_QUEUE * input_queue;	// Queue managing user input events
-ALLEGRO_COLOR font_color;			// The color of drawn text
-ALLEGRO_FONT * font_big;			// Font used to draw text with big size
-ALLEGRO_FONT * font_small;			// Font used to draw text with small size
+ALLEGRO_DISPLAY * display;			// the main area of drawing
+ALLEGRO_EVENT_QUEUE * input_queue;	// queue managing user input events
+ALLEGRO_COLOR font_color;			// the color of drawn text
+ALLEGRO_FONT * font_big;			// font used to draw text with big size
+ALLEGRO_FONT * font_small;			// font used to draw text with small size
 
-size_t samplerate;					// Samplerate of audio file.
-int done;							// If TRUE the program stops
-size_t active_tasks;				// Num. of tasks active
-size_t gain;						// Volume of audio listening
-fft_audio_windowing windowing;		// Windowing method of FFT
-size_t time_ms;						// Elapsed time of audio listening
-float bubble_scale;					// Scale factor of displayed bubbles
-ALLEGRO_AUDIO_STREAM * stream;		// Audio stream object
+size_t samplerate;					// samplerate of audio file.
+int done;							// if TRUE the program stops
+size_t active_tasks;				// num. of tasks active
+size_t gain;						// volume of audio listening
+fft_audio_windowing windowing;		// windowing method of FFT
+size_t time_ms;						// elapsed time of audio listening
+float bubble_scale;					// scale factor of displayed bubbles
+ALLEGRO_AUDIO_STREAM * stream;		// audio stream object
 
 // Mutexes
-pthread_mutex_t mux_done;			// Mutex associated to variable done
-pthread_mutex_t mux_active_tasks;	// Mutex associated to variable active_tasks
-pthread_mutex_t mux_gain;			// Mutex associated to variable gain
-pthread_mutex_t mux_windowing;		// Mutex associated to variable windowing
-pthread_mutex_t mux_time_ms;		// Mutex associated to variable time_ms
-pthread_mutex_t mux_bubble_scale;	// Mutex associated to variable bubble_scale
+pthread_mutex_t mux_done;			// mutex associated to variable done
+pthread_mutex_t mux_active_tasks;	// mutex associated to variable active_tasks
+pthread_mutex_t mux_gain;			// mutex associated to variable gain
+pthread_mutex_t mux_windowing;		// mutex associated to variable windowing
+pthread_mutex_t mux_time_ms;		// mutex associated to variable time_ms
+pthread_mutex_t mux_bubble_scale;	// mutex associated to variable bubble_scale
 
 //------------------------------------------------------------------------------
 // Mutex, Condition variables and counter to implement precedence relationship
 // between task_fft and all task_bubble periodic tasks.
 //------------------------------------------------------------------------------
-pthread_cond_t cond_fft_producer;	// Cond. var. associated to task_fft
-pthread_cond_t cond_fft_consumers;	// Cond. var. associated to all task_bubble
-pthread_mutex_t mux_fft;			// Mutex associated to the prev. cond. var.
-size_t fft_counter;					// Variable to make synchronization
+pthread_cond_t cond_fft_producer;	// cond. var. associated to task_fft
+pthread_cond_t cond_fft_consumers;	// cond. var. associated to all task_bubble
+pthread_mutex_t mux_fft;			// mutex associated to the prev. cond. var.
+size_t fft_counter;					// variable to make synchronization
 
 
 //------------------------------------------------------------------------------
@@ -228,11 +228,15 @@ void allegro_stream_set_gain(size_t val)
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function copies the current frame audio values to a buffer provided by
-// the streaming object.
+// This function tries to copy the current frame audio values into a buffer
+// provided by the streaming object.
+//
+// RETURN
+// It returns TRUE if the frame is copied into the buffer.
+// Otherwise it return FALSE.
 //
 //------------------------------------------------------------------------------
-void allegro_stream_fill_new_fragment()
+int allegro_stream_fill_frame()
 {
 	float * buffer = NULL;
 
@@ -241,9 +245,9 @@ void allegro_stream_fill_new_fragment()
 		fft_audio_fill_buffer_data(buffer);
 		allegro_check(al_set_audio_stream_fragment(stream, buffer),
 					  "al_set_audio_stream_fragment()");
-	} else {
-		fprintf(stderr, "Fragment not inserted!\n", NULL);
+		return TRUE;
 	}
+	return FALSE;
 }
 
 
@@ -415,8 +419,8 @@ float bubble_spacing_with(size_t n)
 fft_audio_range bubble_samples_range(const size_t id,
 									 const size_t n)
 {
-	float step;
-	fft_audio_range range;
+	float step;					// the step exponent to calculate from and to
+	fft_audio_range range;		// the range [from, to] to be calculated
 
 	step = log2f(FRAGMENT_SAMPLES / 2 - n) / (n + 1);
 	range.from = (size_t)lroundf(powf(2, (id + 1) * step)) + id + 1;
@@ -447,11 +451,11 @@ float bubble_calculate_val(const size_t id,
 						   const float val_old,
 						   const fft_audio_range range)
 {
-	float val;
-	float valMin;
-	float valMax;
-	fft_audio_stats audio_stats;
-	fft_audio_stats frame_stats;
+	float val;						// the new value
+	float valMin;					// the min value of audio frame statistics
+	float valMax;					// the max value of audio frame statistics
+	fft_audio_stats audio_stats;	// statistics of the audio frame
+	fft_audio_stats frame_stats;	// statistics of the audio in the range
 
 	audio_stats = fft_audio_get_stats();
 	frame_stats = fft_audio_get_stats_samples(range);
@@ -486,13 +490,13 @@ void draw_trail(const size_t id,
 				const float spacing,
 				const float scale)
 {
-	size_t i;
-	size_t top;
-	size_t freq;
-	btrail_color bcolor;
-	btrail_point bpoint;
-	float alpha;
-	ALLEGRO_COLOR color;
+	size_t i;					// index of the bubble in the trail
+	size_t top;					// index of bubble to be displayed
+	size_t freq;				// frequency of the bubble trail
+	btrail_color bcolor;		// color of the bubble trail
+	btrail_point bpoint;		// coordinates of a bubble
+	float alpha;				// alpha channel of the color
+	ALLEGRO_COLOR color;		// aux color variable
 
 	btrails_lock(id);
 	top = btrails_get_top(id);
@@ -533,10 +537,10 @@ void draw_trail(const size_t id,
 
 void draw_trails()
 {
-	size_t i;
-	size_t active_tasks_local;
-	float spacing;
-	float scale;
+	size_t i;						// index of the bubble trail
+	size_t active_tasks_local;		// local value of active tasks
+	float spacing;					// spacing between two bubbles
+	float scale;					// scale factor by which the bubble is drawn
 
 	MUTEX_EXP(active_tasks_local = active_tasks, mux_active_tasks);
 	MUTEX_EXP(scale = bubble_scale, mux_bubble_scale);
@@ -550,7 +554,7 @@ void draw_trails()
 
 void draw_bubbles_info()
 {
-	size_t active_tasks_local;
+	size_t active_tasks_local;		// local value of active tasks
 
 	MUTEX_EXP(active_tasks_local = active_tasks, mux_active_tasks);
 
@@ -563,7 +567,7 @@ void draw_bubbles_info()
 
 void draw_windowing_info()
 {
-	int windowing_local;
+	int windowing_local;		// local value of windowing method
 
 	MUTEX_EXP(windowing_local = windowing, mux_windowing);
 	fft_audio_get_windowing_name(windowing_local);
@@ -597,7 +601,7 @@ void draw_time_info()
 
 void draw_gain_info()
 {
-	size_t gain_local;
+	size_t gain_local;		// local value of gain
 
 	MUTEX_EXP(gain_local = gain, mux_gain);
 
@@ -632,10 +636,10 @@ void draw_user_info()
 //------------------------------------------------------------------------------
 void * task_fft(void * arg)
 {
-	const size_t id = ptask_id(arg);	// id of this periodic task
-	int done_local = FALSE;				// local value of done
-	int windowing_local;				// local value of windowing method
-	int ret;							// ret value
+	const size_t id = ptask_id(arg);		// id of this periodic task
+	int done_local = FALSE;					// local value of done
+	int windowing_local;					// local value of windowing method
+	int ret;								// ret value
 
 	// Activate for the first time this periodic task
 	ptask_activate(id);
@@ -649,19 +653,21 @@ void * task_fft(void * arg)
 		}
 
 		// Provide new values to the audio stream
-		allegro_stream_fill_new_fragment();
-		// Update the elapsed audio time
-		MUTEX_EXP(time_ms += FRAGMENT_SAMPLES * 1000/ samplerate,
-				 mux_time_ms);
+		ret = allegro_stream_fill_frame();
+		if (ret == TRUE) {
+			// Update the elapsed audio time
+			MUTEX_EXP(time_ms += FRAGMENT_SAMPLES * 1000/ samplerate,
+					 mux_time_ms);
 
-		// Load the curent windowing method and compute the FFT
-		MUTEX_EXP(windowing_local = windowing, mux_windowing);
-		fft_audio_compute_fft(windowing_local);
+			// Load the curent windowing method and compute the FFT
+			MUTEX_EXP(windowing_local = windowing, mux_windowing);
+			fft_audio_compute_fft(windowing_local);
 
-		// Load a new frame for the next period
-		ret = fft_audio_load_next_frame();
-		if (ret == FFT_AUDIO_EOF) {
-			MUTEX_EXP(done = TRUE, mux_done);
+			// Load a new frame for the next period
+			ret = fft_audio_load_next_frame();
+			if (ret == FFT_AUDIO_EOF) {
+				MUTEX_EXP(done = TRUE, mux_done);
+			}
 		}
 
 		// Awake all task_bubble to make them computing the new frame
@@ -686,16 +692,16 @@ void * task_fft(void * arg)
 
 void * task_bubble(void * arg)
 {
-	const size_t id = ptask_id(arg);
-	const size_t user_id = ptask_user_id(arg);
-	int done_local = FALSE;
-	size_t active_tasks_local;
-	float bubble_spacing;
-	fft_audio_range range;
-	float val = 0.0f;
-	float x = 0.0f;
-	float y = 0.0f;
-	size_t color_id;
+	const size_t id = ptask_id(arg);			// id of this periodic task
+	const size_t user_id = ptask_user_id(arg);	// user id of this periodic task
+	int done_local = FALSE;						// local value of done
+	size_t active_tasks_local;					// local value of active tasks
+	float bubble_spacing;						// space between two bubbles
+	fft_audio_range range;						// range calculated by this task
+	float val = 0.0f;							// value to calculate y bpoint
+	float x = 0.0f;								// x value of bpoint
+	float y = 0.0f;								// y value of bpoint
+	size_t color_id;							// id of the color selected
 
 	ptask_activate(id);
 
