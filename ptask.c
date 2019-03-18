@@ -15,7 +15,8 @@
 // PTASK LOCAL STRUCT DEFINITIONS
 //------------------------------------------------------------------------------
 typedef struct {
-	size_t id;					// id of the periodic task
+	size_t id;					// the internal id of the periodic task
+	size_t user_id;				// the id provided by the user
 	size_t period;				// period expressed in milliseconds
 	size_t deadline;			// relative deadline expressed in milliseconds
 	size_t priority;			// priority in the range 0 (low) to 99 (high)
@@ -43,6 +44,7 @@ static size_t task_count = 0;		// number of created tasks
 //
 //------------------------------------------------------------------------------
 int ptask_create(void * (*task_handler)(void *),
+				 const size_t user_id,
 				 const size_t period,
 				 const size_t deadline,
 				 const size_t priority)
@@ -58,6 +60,7 @@ int ptask_create(void * (*task_handler)(void *),
 	task_count++;
 
 	tp[id].id = id;
+	tp[id].user_id = user_id;
 	tp[id].period = period;
 	tp[id].deadline = deadline;
 	tp[id].priority = priority;
@@ -82,13 +85,26 @@ int ptask_create(void * (*task_handler)(void *),
 //------------------------------------------------------------------------------
 //
 // This function extracts the id of the periodic task from the pointer arg that
-// contains all releated information of the periodic task.
+// contains all releated information of that task.
 //
 //------------------------------------------------------------------------------
 size_t ptask_id(const void * arg)
 {
 	task_par * tp = (task_par *)arg;
 	return tp->id;
+}
+
+
+//------------------------------------------------------------------------------
+//
+// This function extracts the id of the periodic task, provided by the user,
+// from the pointer arg that contains all releated information of the that task.
+//
+//------------------------------------------------------------------------------
+size_t ptask_user_id(const void * arg)
+{
+	task_par * tp = (task_par *)arg;
+	return tp->user_id;
 }
 
 

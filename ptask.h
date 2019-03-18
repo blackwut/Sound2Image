@@ -29,6 +29,7 @@
 //
 // PARAMETERS
 // task_handler: routine of the task
+// user_id: the id associated by the user to the created task
 // period: period of the task
 // deadline: deadline of the task. It must be less than or equal to period
 // priority: priority of the task. The value must be in the range [0, 99]
@@ -40,6 +41,7 @@
 //
 //------------------------------------------------------------------------------
 int ptask_create(void * (*task_handler)(void *),
+				 const size_t user_id,
 				 const size_t period,
 				 const size_t deadline,
 				 const size_t priority);
@@ -48,17 +50,31 @@ int ptask_create(void * (*task_handler)(void *),
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function returns the id of the periodic task.
+// This function returns the internal id of the periodic task.
 //
 // PARAMETERS
 // arg: the arguments provided to the task_handler routine
 //
 // RETURN
-// The id of the periodic task
+// The internal id of the periodic task
 //
 //------------------------------------------------------------------------------
 size_t ptask_id(const void *arg);
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function returns the id of the periodic task provided by the user.
+//
+// PARAMETERS
+// arg: the arguments provided to the task_handler routine
+//
+// RETURN
+// The id of the periodic task provided by the user
+//
+//------------------------------------------------------------------------------
+size_t ptask_user_id(const void *arg);
 
 //------------------------------------------------------------------------------
 //
