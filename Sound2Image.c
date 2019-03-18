@@ -31,14 +31,35 @@
 //------------------------------------------------------------------------------
 // SOUND2IMAGE FUNCTION PROTOTYPES
 //------------------------------------------------------------------------------
+
+// Check functions
+void fft_audio_check(int ret,
+					 const char * description);
+void btrails_check(int ret,
+				   const char * description);
+void ptask_check(int ret,
+				 const char * description);
+void allegro_check(bool test,
+				   const char * description);
+
+// Allegro help functions
+void allegro_init();
+ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels);
+void allegro_stream_set_gain(size_t val);
+void allegro_stream_fill_new_fragment();
+void allegro_blender_mode_standard();
+void allegro_blender_mode_alpha();
+void allegro_free();
+
+// Bubble help functions
 float bubble_spacing_with(size_t n);
 fft_audio_range bubble_samples_range(const size_t id,
 									 const size_t n);
 float bubble_calculate_val(const size_t id,
 						   const float val_old,
 						   const fft_audio_range range);
-void stream_set_gain(size_t val);
-void stream_fill_new_fragment();
+
+// Draw help functions
 void draw_trail(const size_t id,
 				const float spacing,
 				const float scale);
@@ -48,19 +69,22 @@ void draw_windowing_info();
 void draw_time_info();
 void draw_gain_info();
 void draw_user_info();
+
+// Task handlers
 void * task_fft(void * arg);
 void * task_bubble(void * arg);
 void * task_display(void * arg);
 void * task_input(void * arg);
 
+
 //------------------------------------------------------------------------------
 // SOUND2IMAGE GLOBAL DATA
 //------------------------------------------------------------------------------
-ALLEGRO_DISPLAY * display;
-ALLEGRO_COLOR font_color;
-ALLEGRO_FONT * font_big;
-ALLEGRO_FONT * font_small;
-
+ALLEGRO_DISPLAY * display;			// The main area of drawing
+ALLEGRO_EVENT_QUEUE * input_queue;	// Queue managing user input events
+ALLEGRO_COLOR font_color;			// The color of drawn text
+ALLEGRO_FONT * font_big;			// Font used to draw text with big size
+ALLEGRO_FONT * font_small;			// Font used to draw text with small size
 
 size_t samplerate;					// Samplerate of audio file.
 int done;							// If TRUE the program stops
@@ -92,57 +116,123 @@ size_t fft_counter;					// Variable to make synchronization
 //------------------------------------------------------------------------------
 // SOUND2IMAGE FUNCTION DEFINITIONS
 //------------------------------------------------------------------------------
-
-void allegro_check(bool test, const char * description)
+void fft_audio_check(int ret,
+					 const char * description)
 {
-	if (test) return;
-	fprintf(stderr, "ALLEGRO ERROR - %s\n", description);
-	exit(EXIT_ALLEGRO_ERROR);
+	if (ret == FFT_AUDIO_SUCCESS) return;
+	fprintf(stderr, "FFT_AUDIO ERROR - %s\n", description);
+
+	if (ret == FFT_AUDIO_ERROR_FILE) exit(EXIT_FFT_AUDIO_OPEN_FILE);
+	if (ret == FFT_AUDIO_ERROR_SAMPLERATE) exit(EXIT_FFT_AUDIO_SAMPLERATE);
+	if (ret == FFT_AUDIO_ERROR_CHANNELS) exit(EXIT_FFT_AUDIO_CHANNELS);
+	exit(EXIT_FFT_AUDIO_ERROR);
 }
 
-void ptask_check(int ret, const char * description)
+void btrails_check(int ret,
+				   const char * description)
+{
+	if (ret == BTRAILS_SUCCESS) return;
+	fprintf(stderr, "BRAILS ERROR - %s\n", description);
+	exit(BTRAILS_ERROR);
+}
+
+void ptask_check(int ret,
+				 const char * description)
 {
 	if (ret == PTASK_SUCCESS) return;
 	fprintf(stderr, "PTASK ERROR - %s\n", description);
 
 	if (ret == PTASK_ERROR_CREATE) exit(EXIT_PTASK_CREATE);
 	if (ret == PTASK_ERROR_JOIN) exit(EXIT_PTASK_JOIN);
+	exit(EXIT_PTASK_ERROR);
+}
+
+void allegro_check(bool ret,
+				   const char * description)
+{
+	if (ret) return;
+	fprintf(stderr, "ALLEGRO ERROR - %s\n", description);
+	exit(EXIT_ALLEGRO_ERROR);
 }
 
 void allegro_init()
 {
 	allegro_check(al_init(), "al_init()");
 
-	al_set_new_window_title(WINDOW_TITLE);
-
 	// Display
+	al_set_new_window_title(WINDOW_TITLE);
 	al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
 	al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
 	al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR | ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
 	display = al_create_display(DISPLAY_W, DISPLAY_H);
 	allegro_check(display, "al_create_display()");
 
+	// User input
+	input_queue = al_create_event_queue();
+	allegro_check(input_queue, "al_create_event_queue()");
+	allegro_check(al_install_keyboard(), "al_install_keyboard()");
+	al_register_event_source(input_queue, al_get_display_event_source(display));
+	al_register_event_source(input_queue, al_get_keyboard_event_source());
+
 	// Audio
 	al_init_acodec_addon();
 	allegro_check(al_install_audio(), "al_install_audio()");
 	allegro_check(al_reserve_samples(0), "al_reserve_samples()");
 
+	// Primitives
+	allegro_check(al_init_primitives_addon(), "al_init_primitives_addon()");
+
 	// Font
 	allegro_check(al_init_font_addon(), "al_init_font_addon()");
 	allegro_check(al_init_ttf_addon(), "al_init_ttf_addon()");
+	font_color = al_map_rgba(192,  57,  43, 255);
 	font_big = al_load_ttf_font(FONT_NAME, FONT_SIZE_BIG, 0);
 	font_small = al_load_ttf_font(FONT_NAME, FONT_SIZE_SMALL, 0);
-	// font_color = al_map_rgba(41, 128, 185 , 255);
-	font_color = al_map_rgba(192,  57,  43, 255);
-
-	// Primitives
-	allegro_check(al_init_primitives_addon(), "al_init_primitives_addon()");
 }
 
 ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
 {
 	return (channels == 2 ? ALLEGRO_CHANNEL_CONF_2 : ALLEGRO_CHANNEL_CONF_1);
 }
+
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function set the given gain to the stream audio.
+//
+// PARAMETERS
+// val: the value of the new gain to set
+//
+//------------------------------------------------------------------------------
+void allegro_stream_set_gain(size_t val)
+{
+	allegro_check(al_set_audio_stream_gain(stream, val / 100.0f),
+				  "al_set_audio_stream_gain()");
+}
+
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function copies the current frame audio values to a buffer provided by
+// the streaming object.
+//
+//------------------------------------------------------------------------------
+void allegro_stream_fill_new_fragment()
+{
+	float * buffer = NULL;
+
+	buffer = al_get_audio_stream_fragment(stream);
+	if (buffer != NULL) {
+		fft_audio_fill_buffer_data(buffer);
+		allegro_check(al_set_audio_stream_fragment(stream, buffer),
+					  "al_set_audio_stream_fragment()");
+	} else {
+		fprintf(stderr, "Fragment not inserted!\n", NULL);
+	}
+}
+
 
 void allegro_blender_mode_standard()
 {
@@ -156,13 +246,119 @@ void allegro_blender_mode_alpha()
 
 void allegro_free()
 {
+	al_uninstall_keyboard();
 	al_uninstall_audio();
+	al_shutdown_primitives_addon();
 	al_destroy_font(font_big);
 	al_destroy_font(font_small);
 	al_shutdown_ttf_addon();
 	al_shutdown_font_addon();
-	al_shutdown_primitives_addon();
 	al_destroy_display(display);
+	al_destroy_event_queue(input_queue);
+	al_uninstall_system();
+}
+
+void sound2image_init_variables(char * filename)
+{
+	size_t channels;
+
+	done = FALSE;
+	fft_counter = 0;
+	active_tasks = BUBBLE_TASKS_BASE;
+	bubble_scale = BUBBLE_SCALE_BASE;
+	time_ms = 0;
+	gain = GAIN_BASE;
+	windowing = fft_audio_rectangular;
+
+	pthread_mutex_init(&mux_done, NULL);
+	pthread_mutex_init(&mux_time_ms, NULL);
+	pthread_mutex_init(&mux_bubble_scale, NULL);
+	pthread_mutex_init(&mux_active_tasks, NULL);
+
+	pthread_cond_init(&cond_fft_producer, NULL);
+	pthread_cond_init(&cond_fft_consumers, NULL);
+	pthread_mutex_init(&mux_fft, NULL);
+	pthread_mutex_init(&mux_gain, NULL);
+	pthread_mutex_init(&mux_windowing, NULL);
+
+	fft_audio_check(fft_audio_init(filename,
+								   FRAGMENT_SAMPLES,
+								   fft_audio_hamming),
+					"File does not exits or it is not compatible");
+	samplerate = fft_audio_get_samplerate();
+	channels = fft_audio_get_channels();
+
+	allegro_init();
+	al_set_target_bitmap(NULL);
+
+	stream = al_create_audio_stream(FRAGMENT_COUNT,
+									FRAGMENT_SAMPLES,
+									samplerate,
+									ALLEGRO_AUDIO_DEPTH_FLOAT32,
+									allegro_channel_conf_with(channels));
+	al_set_audio_stream_playmode(stream, ALLEGRO_PLAYMODE_ONCE);
+	allegro_stream_set_gain(gain);
+	allegro_check(al_attach_audio_stream_to_mixer(stream,
+												  al_get_default_mixer()),
+				  "al_attach_audio_stream_to_mixer()");
+
+	btrails_check(btrails_init(), "Cannot create Bubble Trails");
+}
+
+void sound2image_create_tasks()
+{
+	size_t i;
+
+	for (i = 0; i < BUBBLE_TASKS_MAX; ++i) {
+		ptask_check(ptask_create(task_bubble,
+								 i,
+								 TASK_BUBBLE_PERIOD,
+								 TASK_BUBBLE_DEADLINE,
+								 TASK_BUBBLE_PRIORITY),
+					"task_bubble");
+	}
+
+	ptask_check(ptask_create(task_fft,
+							 i++,
+							 TASK_FFT_PERIOD,
+							 TASK_FFT_DEADLINE,
+							 TASK_FFT_PRIORITY),
+				"task_fft");
+	ptask_check(ptask_create(task_input,
+							 i++,
+							 TASK_INPUT_PERIOD,
+							 TASK_INPUT_DEADLINE,
+							 TASK_INPUT_PRIORITY),
+				"task_input");
+	ptask_check(ptask_create(task_display,
+							 i++,
+							 TASK_DISPLAY_PERIOD,
+							 TASK_DISPLAY_DEADLINE,
+							 TASK_DISPLAY_PRIORITY),
+				"task_display");
+}
+
+void sound2image_waits_tasks()
+{
+	ptask_check(ptask_wait_tasks(), "ptask_wait_tasks()");
+}
+
+void sound2image_free()
+{
+	pthread_mutex_destroy(&mux_active_tasks);
+	pthread_mutex_destroy(&mux_bubble_scale);
+	pthread_mutex_destroy(&mux_time_ms);
+	pthread_mutex_destroy(&mux_done);
+	pthread_cond_destroy(&cond_fft_producer);
+	pthread_cond_destroy(&cond_fft_consumers);
+	pthread_mutex_destroy(&mux_fft);
+	pthread_mutex_destroy(&mux_gain);
+	pthread_mutex_destroy(&mux_windowing);
+
+	btrails_free();
+	fft_audio_free();
+	al_drain_audio_stream(stream);
+	allegro_free();
 }
 
 //------------------------------------------------------------------------------
@@ -259,42 +455,6 @@ float bubble_calculate_val(const size_t id,
 	return 0.0f;
 }
 
-
-//------------------------------------------------------------------------------
-//
-// DESCRIPTION
-// This function set the given gain to the stream audio.
-//
-// PARAMETERS
-// val: the value of the new gain to set
-//
-//------------------------------------------------------------------------------
-void stream_set_gain(size_t val)
-{
-	allegro_check(al_set_audio_stream_gain(stream, val / 100.0f),
-				  "al_set_audio_stream_gain()");
-}
-
-//------------------------------------------------------------------------------
-//
-// DESCRIPTION
-// This function copies the current frame audio values to a buffer provided by
-// the streaming object.
-//
-//------------------------------------------------------------------------------
-void stream_fill_new_fragment()
-{
-	float * buffer = NULL;
-
-	buffer = al_get_audio_stream_fragment(stream);
-	if (buffer != NULL) {
-		fft_audio_fill_buffer_data(buffer);
-		allegro_check(al_set_audio_stream_fragment(stream, buffer),
-					  "al_set_audio_stream_fragment()");
-	} else {
-		fprintf(stderr, "Fragment not inserted!\n", NULL);
-	}
-}
 
 //------------------------------------------------------------------------------
 //
@@ -459,8 +619,8 @@ void draw_user_info()
 //------------------------------------------------------------------------------
 void * task_fft(void * arg)
 {
-	const int id = ptask_id(arg);		// id of this periodic task
-	int done_local = FALSE;					// local value of done
+	const size_t id = ptask_id(arg);	// id of this periodic task
+	int done_local = FALSE;				// local value of done
 	int windowing_local;				// local value of windowing method
 	int ret;							// ret value
 
@@ -476,7 +636,7 @@ void * task_fft(void * arg)
 		}
 
 		// Provide new values to the audio stream
-		stream_fill_new_fragment();
+		allegro_stream_fill_new_fragment();
 		// Update the elapsed audio time
 		MUTEX_EXP(time_ms += FRAGMENT_SAMPLES * 1000/ samplerate,
 				 mux_time_ms);
@@ -501,8 +661,8 @@ void * task_fft(void * arg)
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
-			fprintf(stderr, "%d) deadline missed! woet: %zu ms\n",
-				id, ptask_get_woet_ms(id));
+			fprintf(stderr, "%zu) deadline missed! woet: %zu ms\n",
+					id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
 	}
@@ -513,7 +673,8 @@ void * task_fft(void * arg)
 
 void * task_bubble(void * arg)
 {
-	const int id = ptask_id(arg);
+	const size_t id = ptask_id(arg);
+	const size_t user_id = ptask_user_id(arg);
 	int done_local = FALSE;
 	size_t active_tasks_local;
 	float bubble_spacing;
@@ -538,11 +699,11 @@ void * task_bubble(void * arg)
 		MUTEX_EXP(active_tasks_local = active_tasks, mux_active_tasks);
 		bubble_spacing = bubble_spacing_with(active_tasks_local);
 
-		if (id < active_tasks_local) {
-			range = bubble_samples_range(id, active_tasks_local);
-			val = bubble_calculate_val(id, val, range);
-			color_id = MAX_COLORS * (id / (float) active_tasks_local);
-			x = (id + 1) * bubble_spacing;
+		if (user_id < active_tasks_local) {
+			range = bubble_samples_range(user_id, active_tasks_local);
+			val = bubble_calculate_val(user_id, val, range);
+			color_id = MAX_COLORS * (user_id / (float) active_tasks_local);
+			x = (user_id + 1) * bubble_spacing;
 			y = DISPLAY_AUDIO_Y + DISPLAY_AUDIO_H - val * DISPLAY_AUDIO_H;
 		} else {
 			range.from = 0;
@@ -553,14 +714,14 @@ void * task_bubble(void * arg)
 		}
 
 		// Put a new bubble into the circular buffer
-		btrails_lock(id);
-		btrails_set_color(id,
+		btrails_lock(user_id);
+		btrails_set_color(user_id,
 						  colors[color_id][0],
 						  colors[color_id][1],
 						  colors[color_id][2]);
-		btrails_set_freq(id, range.to * samplerate / FRAGMENT_SAMPLES);
-		btrails_put_bubble_pos(id, x, y);
-		btrails_unlock(id);
+		btrails_set_freq(user_id, range.to * samplerate / FRAGMENT_SAMPLES);
+		btrails_put_bubble_pos(user_id, x, y);
+		btrails_unlock(user_id);
 
 		// Awake the task_fft if all task_bubble completed the computation
 		MUTEX_LOCK(mux_fft);
@@ -575,8 +736,8 @@ void * task_bubble(void * arg)
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
-			fprintf(stderr, "%d) deadline missed! woet: %zu ms\n",
-				id, ptask_get_woet_ms(id));
+			fprintf(stderr, "%zu) deadline missed! woet: %zu ms\n",
+					id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
 	}
@@ -588,9 +749,9 @@ void * task_bubble(void * arg)
 
 void * task_display(void * arg)
 {
-	const int id = ptask_id(arg);		// id of this periodic task
-	int done_local = FALSE;					// local value of done
-	ALLEGRO_COLOR background_color = al_map_rgba(32, 32, 32, 255);
+	const size_t id = ptask_id(arg);					// id of this task
+	int done_local = FALSE;								// local value of done
+	ALLEGRO_COLOR color = al_map_rgba(32, 32, 32, 255);	// background color
 
 	// Set the target buffer of drawing functions
 	al_set_target_backbuffer(display);
@@ -599,8 +760,10 @@ void * task_display(void * arg)
 
 	while (!done_local) {
 
-		al_clear_to_color(background_color);
+		// Clear the display
+		al_clear_to_color(color);
 
+		// Draw trails bubble and user information
 		draw_trails();
 		draw_bubbles_info();
 		draw_windowing_info();
@@ -615,8 +778,8 @@ void * task_display(void * arg)
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
-			fprintf(stderr, "%d) deadline missed! woet: %zu ms\n",
-				id, ptask_get_woet_ms(id));
+			fprintf(stderr, "%zu) deadline missed! woet: %zu ms\n",
+					id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
 	}
@@ -626,18 +789,12 @@ void * task_display(void * arg)
 
 void * task_input(void * arg)
 {
-	const int id = ptask_id(arg);
+	const size_t id = ptask_id(arg);
 	int done_local = FALSE;
 	size_t i;
-	ALLEGRO_EVENT_QUEUE * input_queue;
 	ALLEGRO_EVENT event;
 	int keys[ALLEGRO_KEY_MAX];
 
-	input_queue = al_create_event_queue();
-	allegro_check(input_queue, "al_create_event_queue()");
-	allegro_check(al_install_keyboard(), "al_install_keyboard()");
-	al_register_event_source(input_queue, al_get_display_event_source(display));
-	al_register_event_source(input_queue, al_get_keyboard_event_source());
 	memset(keys, 0, sizeof(keys));
 
 	ptask_activate(id);
@@ -686,7 +843,7 @@ void * task_input(void * arg)
 			MUTEX_LOCK(mux_gain);
 			if (gain < GAIN_MAX) {
 				gain += GAIN_STEP;
-				stream_set_gain(gain);
+				allegro_stream_set_gain(gain);
 			}
 			MUTEX_UNLOCK(mux_gain);
 		}
@@ -695,7 +852,7 @@ void * task_input(void * arg)
 			MUTEX_LOCK(mux_gain);
 			if (gain > GAIN_MIN) {
 				gain -= GAIN_STEP;
-				stream_set_gain(gain);
+				allegro_stream_set_gain(gain);
 			}
 			MUTEX_UNLOCK(mux_gain);
 		}
@@ -720,122 +877,26 @@ void * task_input(void * arg)
 		MUTEX_EXP(done_local = done, mux_done);
 
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
-			fprintf(stderr, "%d) deadline missed! woet: %zu ms\n",
-				id, ptask_get_woet_ms(id));
+			fprintf(stderr, "%zu) deadline missed! woet: %zu ms\n",
+					id, ptask_get_woet_ms(id));
 		}
 		ptask_wait_for_activation(id);
 	}
-
-	al_uninstall_keyboard();
-	al_destroy_event_queue(input_queue);
 
 	return NULL;
 }
 
 int main(int argc, char * argv[])
 {
-	char audio_filename[FILENAME_SIZE];
-	size_t channels;
-	int ret;
-
-	pthread_mutex_init(&mux_done, NULL);
-	pthread_mutex_init(&mux_time_ms, NULL);
-	pthread_mutex_init(&mux_bubble_scale, NULL);
-	pthread_mutex_init(&mux_active_tasks, NULL);
-
-	pthread_cond_init(&cond_fft_producer, NULL);
-	pthread_cond_init(&cond_fft_consumers, NULL);
-	pthread_mutex_init(&mux_fft, NULL);
-	pthread_mutex_init(&mux_gain, NULL);
-	pthread_mutex_init(&mux_windowing, NULL);
-
-	done = FALSE;
-	fft_counter = 0;
-	active_tasks = BUBBLE_TASKS_BASE;
-	bubble_scale = BUBBLE_SCALE_BASE;
-	time_ms = 0;
-	gain = GAIN_BASE;
-	windowing = fft_audio_rectangular;
-	memset(audio_filename, 0, FILENAME_SIZE);
-
 	if (argc < 2) {
 		fprintf(stderr, "Please provide an audio filename.\n");
 		exit(EXIT_NO_FILENAME);
 	}
-	strncpy(audio_filename, argv[1], FILENAME_SIZE);
-	
-	ret = fft_audio_init(audio_filename, FRAGMENT_SAMPLES, fft_audio_hamming);
-	if (ret != FFT_AUDIO_SUCCESS) {
-		fprintf(stderr, "File does not exits or it is not compatible\n");
-		exit(EXIT_OPEN_FILE);
-	}
-	samplerate = fft_audio_get_samplerate();
-	channels = fft_audio_get_channels();
 
-	allegro_init();
-	al_set_target_bitmap(NULL);
-
-	stream = al_create_audio_stream(FRAGMENT_COUNT,
-									FRAGMENT_SAMPLES,
-									samplerate,
-									ALLEGRO_AUDIO_DEPTH_FLOAT32,
-									allegro_channel_conf_with(channels));
-	al_set_audio_stream_playmode(stream, ALLEGRO_PLAYMODE_ONCE);
-	stream_set_gain(gain);
-	allegro_check(al_attach_audio_stream_to_mixer(stream, 
-												  al_get_default_mixer()),
-				  "al_attach_audio_stream_to_mixer()");
-
-	ret = btrails_init();
-	if (ret == BTRAILS_ERROR) {
-		printf("Cannot create Bubble Trails.\n");
-		exit(EXIT_BTRAILS_ERROR);
-	}
-
-	// Tasks
-	for (int i = 0; i < BUBBLE_TASKS_MAX; ++i) {
-		ptask_check(ptask_create(task_bubble,
-								 TASK_BUBBLE_PERIOD,
-								 TASK_BUBBLE_DEADLINE,
-								 TASK_BUBBLE_PRIORITY),
-					"task_bubble");
-	}
-
-	ptask_check(ptask_create(task_fft,
-							 TASK_FFT_PERIOD,
-							 TASK_FFT_DEADLINE,
-							 TASK_FFT_PRIORITY),
-				"task_fft");
-	ptask_check(ptask_create(task_input,
-							 TASK_INPUT_PERIOD,
-							 TASK_INPUT_DEADLINE,
-							 TASK_INPUT_PRIORITY),
-				"task_input");
-	ptask_check(ptask_create(task_display,
-							 TASK_DISPLAY_PERIOD,
-							 TASK_DISPLAY_DEADLINE,
-							 TASK_DISPLAY_PRIORITY),
-				"task_display");
-	
-	ptask_check(ptask_wait_tasks(), "ptask_wait_tasks()");
-
-	// Free
-	pthread_mutex_destroy(&mux_active_tasks);
-	pthread_mutex_destroy(&mux_bubble_scale);
-	pthread_mutex_destroy(&mux_time_ms);
-	pthread_mutex_destroy(&mux_done);
-
-	pthread_cond_destroy(&cond_fft_producer);
-	pthread_cond_destroy(&cond_fft_consumers);
-	pthread_mutex_destroy(&mux_fft);
-
-	pthread_mutex_destroy(&mux_gain);
-	pthread_mutex_destroy(&mux_windowing);
-
-	btrails_free();
-	fft_audio_free();
-	al_drain_audio_stream(stream);
-	allegro_free();
+	sound2image_init_variables(argv[1]);
+	sound2image_create_tasks();
+	sound2image_waits_tasks();
+	sound2image_free();
 
 	return 0;
 }
