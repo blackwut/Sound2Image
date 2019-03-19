@@ -141,6 +141,19 @@ void fft_audio_check(int ret,
 	exit(EXIT_FFT_AUDIO_ERROR);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function checks if a btrail function returned with an error. If an
+// error occurred, it prints an error message and exits with the corresponding
+// error value.
+//
+// PARAMETERS
+// ret: the return value of the btrail function
+// description: user error info description
+//
+//------------------------------------------------------------------------------
 void btrails_check(int ret,
 				   const char * description)
 {
@@ -149,6 +162,19 @@ void btrails_check(int ret,
 	exit(BTRAILS_ERROR);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function checks if a ptask function returned with an error. If an error
+// occurred, it prints an error message and exits with the corresponding error
+// value.
+//
+// PARAMETERS
+// ret: the return value of the ptask function
+// description: user error info description
+//
+//------------------------------------------------------------------------------
 void ptask_check(int ret,
 				 const char * description)
 {
@@ -160,6 +186,19 @@ void ptask_check(int ret,
 	exit(EXIT_PTASK_ERROR);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function checks if a Allegro function returned with an error. If an
+// error occurred, it prints an error message and exits with the corresponding
+// error value.
+//
+// PARAMETERS
+// ret: the return value of the Allegro function
+// description: user error info description
+//
+//------------------------------------------------------------------------------
 void allegro_check(bool ret,
 				   const char * description)
 {
@@ -168,6 +207,14 @@ void allegro_check(bool ret,
 	exit(EXIT_ALLEGRO_ERROR);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function initializes and configure all Allegro addon and all global
+// variables used.
+//
+//------------------------------------------------------------------------------
 void allegro_init()
 {
 	allegro_check(al_init(), "al_init()");
@@ -203,6 +250,20 @@ void allegro_init()
 	font_small = al_load_ttf_font(FONT_NAME, FONT_SIZE_SMALL, 0);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function return the ALLEGRO_CHANNEL_CONF value corresponding to the
+// number of channels provided.
+//
+// PARAMETERS
+// channels: the number of channel
+//
+// RETURN
+// The ALLEGRO_CHANNEL_CONF corresponding to the number of channels
+//
+//------------------------------------------------------------------------------
 ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
 {
 	return (channels == 2 ? ALLEGRO_CHANNEL_CONF_2 : ALLEGRO_CHANNEL_CONF_1);
@@ -251,16 +312,55 @@ int allegro_stream_fill_frame()
 }
 
 
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function set the blender mode to:
+// ALLEGRO_ADD - ALLEGRO_ONE - ALLEGRO_INVERSE_ALPHA
+// That means that each pixel color is calculated as follows:
+// r = d.r * (1 - s.a) + s.r * 1
+// g = d.g * (1 - s.a) + s.g * 1
+// b = d.b * (1 - s.a) + s.b * 1
+// a = d.a * (1 - s.a) + s.a * 1
+//
+// Where "d" is the destrination bitmap/display pixel color and "s" is the pixel
+// color to be drawn.
+//
+//------------------------------------------------------------------------------
 void allegro_blender_mode_standard()
 {
 	al_set_blender(ALLEGRO_ADD, ALLEGRO_ONE, ALLEGRO_INVERSE_ALPHA);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function set the blender mode to:
+// ALLEGRO_ADD - ALLEGRO_ALPHA - ALLEGRO_INVERSE_ALPHA
+// That means that each pixel color is calculated as follows:
+// r = d.r * (1 - s.a) + s.r * s.a
+// g = d.g * (1 - s.a) + s.g * s.a
+// b = d.b * (1 - s.a) + s.b * s.a
+// a = d.a * (1 - s.a) + s.a * s.a
+//
+// Where "d" is the destrination bitmap/display pixel color and "s" is the pixel
+// color to be drawn.
+//
+//------------------------------------------------------------------------------
 void allegro_blender_mode_alpha()
 {
 	al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function uninstall, shutdown and destroy all allocated Allegro
+// resources used.
+//
+//------------------------------------------------------------------------------
 void allegro_free()
 {
 	al_uninstall_keyboard();
@@ -275,9 +375,21 @@ void allegro_free()
 	al_uninstall_system();
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function initializes all variables used by the program including:
+// fft_audio, btrail, ptask and Allegro libraries. It also open the audio file
+// located in "filename".
+//
+// PARAMETERS
+// filename: the relative path of the audio file
+//
+//------------------------------------------------------------------------------
 void sound2image_init_variables(char * filename)
 {
-	size_t channels;
+	size_t channels;		// number of channels of the audio file
 
 	done = FALSE;
 	fft_counter = 0;
@@ -322,9 +434,16 @@ void sound2image_init_variables(char * filename)
 	btrails_check(btrails_init(), "Cannot create Bubble Trails");
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function create all periodic tasks needed for the execution.
+//
+//------------------------------------------------------------------------------
 void sound2image_create_tasks()
 {
-	size_t i;
+	size_t i;		// The index of periodic task created
 
 	for (i = 0; i < BUBBLE_TASKS_MAX; ++i) {
 		ptask_check(ptask_create(task_bubble,
@@ -355,11 +474,25 @@ void sound2image_create_tasks()
 				"task_display");
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function awaits the termination of all periodic tasks.
+//
+//------------------------------------------------------------------------------
 void sound2image_waits_tasks()
 {
 	ptask_check(ptask_wait_tasks(), "ptask_wait_tasks()");
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function relase all variable memory created at runtime.
+//
+//------------------------------------------------------------------------------
 void sound2image_free()
 {
 	pthread_mutex_destroy(&mux_active_tasks);
@@ -377,6 +510,7 @@ void sound2image_free()
 	al_drain_audio_stream(stream);
 	allegro_free();
 }
+
 
 //------------------------------------------------------------------------------
 //
@@ -414,6 +548,7 @@ float bubble_spacing_with(size_t n)
 //
 // RETURN
 // The range [from, to] of samples for a given bubble.
+// If the buble id is greather or equal to "n", the range returned is [0, 0].
 //
 //------------------------------------------------------------------------------
 fft_audio_range bubble_samples_range(const size_t id,
@@ -422,9 +557,14 @@ fft_audio_range bubble_samples_range(const size_t id,
 	float step;					// the step exponent to calculate from and to
 	fft_audio_range range;		// the range [from, to] to be calculated
 
-	step = log2f(FRAGMENT_SAMPLES / 2 - n) / (n + 1);
-	range.from = (size_t)lroundf(powf(2, (id + 1) * step)) + id + 1;
-	range.to = (size_t)lround(powf(2, (id + 2) * step)) + id + 2;
+	if (id < n) {
+		step = log2f(FRAGMENT_SAMPLES / 2 - n) / (n + 1);
+		range.from = (size_t)lroundf(powf(2, (id + 1) * step)) + id + 1;
+		range.to = (size_t)lround(powf(2, (id + 2) * step)) + id + 2;
+	} else {
+		range.from = 0;
+		range.to = 0;
+	}
 
 	return range;
 }
@@ -503,6 +643,7 @@ void draw_trail(const size_t id,
 	freq = btrails_get_freq(id);
 	bcolor = btrails_get_color(id);
 
+	// Draw all information of that trail
 	allegro_blender_mode_standard();
 	color = al_map_rgba(bcolor.red, bcolor.green, bcolor.blue,
 						BUBBLE_ALPHA_STROKE);
@@ -512,6 +653,7 @@ void draw_trail(const size_t id,
 				  ALLEGRO_ALIGN_CENTER,
 				  "%zu", freq);
 
+	// Draw all bubbles inside that trail
 	allegro_blender_mode_alpha();
 	for (i = 0; i < MAX_BELEMS; ++i) {
 		top = NEXT_BELEM(top);
@@ -531,10 +673,16 @@ void draw_trail(const size_t id,
 					   color,
 					   BUBBLE_THICKNESS);
 	}
-
 	btrails_unlock(id);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function draws all the trails into the current bitmap/display.
+//
+//------------------------------------------------------------------------------
 void draw_trails()
 {
 	size_t i;						// index of the bubble trail
@@ -552,6 +700,13 @@ void draw_trails()
 	}
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function draws the number of bubbles currently displayed.
+//
+//------------------------------------------------------------------------------
 void draw_bubbles_info()
 {
 	size_t active_tasks_local;		// local value of active tasks
@@ -565,6 +720,13 @@ void draw_bubbles_info()
 				  "Bubbles: %zu", active_tasks_local);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function draws the windowing method currently used.
+//
+//------------------------------------------------------------------------------
 void draw_windowing_info()
 {
 	int windowing_local;		// local value of windowing method
@@ -580,6 +742,13 @@ void draw_windowing_info()
 				  fft_audio_get_windowing_name(windowing_local));
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function draws the current time seek of the played audio file.
+//
+//------------------------------------------------------------------------------
 void draw_time_info()
 {
 	size_t minutes;
@@ -599,6 +768,13 @@ void draw_time_info()
 				  "%02zu:%02zu:%03zu", minutes, seconds, milliseconds);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function draws the gain volume of the played audio file.
+//
+//------------------------------------------------------------------------------
 void draw_gain_info()
 {
 	size_t gain_local;		// local value of gain
@@ -611,6 +787,13 @@ void draw_gain_info()
 				  "Vol:%3zu", gain_local);
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function draws the user commands information.
+//
+//------------------------------------------------------------------------------
 void draw_user_info()
 {
 	allegro_blender_mode_standard();
@@ -619,6 +802,7 @@ void draw_user_info()
 				  USER_INFO_TEXT_ALIGN,
 				  USER_INFO_TEXT);
 }
+
 
 //------------------------------------------------------------------------------
 // SOUND2IMAGE PERIODIC TASK DEFINITIONS
@@ -689,7 +873,16 @@ void * task_fft(void * arg)
 	return NULL;
 }
 
-
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This is the handler of the task that compute the bubble assigned to a range
+// to be displayed.
+//
+// PARAMETERS
+// arg: a hidden structure pointer to manage the periodic task
+//
+//------------------------------------------------------------------------------
 void * task_bubble(void * arg)
 {
 	const size_t id = ptask_id(arg);			// id of this periodic task
@@ -707,16 +900,15 @@ void * task_bubble(void * arg)
 
 	while (!done_local) {
 
+		// Update the local value of active_tasks and calculate the spacing
+		MUTEX_EXP(active_tasks_local = active_tasks, mux_active_tasks);
+		bubble_spacing = bubble_spacing_with(active_tasks_local);
+
 		// Wait the computation of task_fft
 		MUTEX_LOCK(mux_fft);
 		while (fft_counter == 0) {
 			pthread_cond_wait(&cond_fft_consumers, &mux_fft);
 		}
-		MUTEX_UNLOCK(mux_fft);
-
-		// Update the local value of active_tasks and calculate the spacing
-		MUTEX_EXP(active_tasks_local = active_tasks, mux_active_tasks);
-		bubble_spacing = bubble_spacing_with(active_tasks_local);
 
 		if (user_id < active_tasks_local) {
 			range = bubble_samples_range(user_id, active_tasks_local);
@@ -732,6 +924,13 @@ void * task_bubble(void * arg)
 			y = BUBBLE_Y_OFFSCREEN;
 		}
 
+		// Awake the task_fft if all task_bubble completed the computation
+		fft_counter--;
+		if (fft_counter == 0) {
+			pthread_cond_signal(&cond_fft_producer);
+		}
+		MUTEX_UNLOCK(mux_fft);
+
 		// Put a new bubble into the circular buffer
 		btrails_lock(user_id);
 		btrails_set_color(user_id,
@@ -741,14 +940,6 @@ void * task_bubble(void * arg)
 		btrails_set_freq(user_id, range.to * samplerate / FRAGMENT_SAMPLES);
 		btrails_put_bubble_pos(user_id, x, y);
 		btrails_unlock(user_id);
-
-		// Awake the task_fft if all task_bubble completed the computation
-		MUTEX_LOCK(mux_fft);
-		fft_counter--;
-		if (fft_counter == 0) {
-			pthread_cond_signal(&cond_fft_producer);
-		}
-		MUTEX_UNLOCK(mux_fft);
 
 		// Update the current status of done variable
 		MUTEX_EXP(done_local = done, mux_done);
@@ -765,7 +956,15 @@ void * task_bubble(void * arg)
 }
 
 
-
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This is the handler of the task that draws the GUI.
+//
+// PARAMETERS
+// arg: a hidden structure pointer to manage the periodic task
+//
+//------------------------------------------------------------------------------
 void * task_display(void * arg)
 {
 	const size_t id = ptask_id(arg);					// id of this task
@@ -806,6 +1005,17 @@ void * task_display(void * arg)
 	return NULL;
 }
 
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This is the handler of the task that read the input of the user and perform
+// the operation associated to that input.
+//
+// PARAMETERS
+// arg: a hidden structure pointer to manage the periodic task
+//
+//------------------------------------------------------------------------------
 void * task_input(void * arg)
 {
 	const size_t id = ptask_id(arg);
@@ -905,6 +1115,17 @@ void * task_input(void * arg)
 	return NULL;
 }
 
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This is the main function that calls all the functions needed to start the
+// program.
+//
+// PARAMETERS
+// argc: the number of parameters given to the program
+// argv: the parameters given to the program
+//
+//------------------------------------------------------------------------------
 int main(int argc, char * argv[])
 {
 	if (argc < 2) {
