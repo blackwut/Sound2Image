@@ -3,7 +3,7 @@
 
 //------------------------------------------------------------------------------
 //
-// This function fill the provided time structure with the current time.
+// This function fills the provided time structure with the current time.
 //
 //------------------------------------------------------------------------------
 int time_now(struct timespec * t)

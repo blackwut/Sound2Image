@@ -143,7 +143,7 @@ void fft_audio_compute_fft(fft_audio_windowing windowing);
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function fill the provided "buffer" with current frame audio values.
+// This function fills the provided "buffer" with current frame audio values.
 //
 // PARAMETERS
 // buffer: a float buffer of size (frame_elements * channels)

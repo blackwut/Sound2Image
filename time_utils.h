@@ -41,7 +41,7 @@
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function fill the provided time structure with the current time.
+// This function fills the provided time structure with the current time.
 //
 // PARAMETERS
 // t: time structure to be filled

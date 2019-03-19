@@ -223,7 +223,9 @@ void allegro_init()
 	al_set_new_window_title(WINDOW_TITLE);
 	al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
 	al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
-	al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | ALLEGRO_MAG_LINEAR | ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
+	al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | 
+							ALLEGRO_MAG_LINEAR |
+							ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
 	display = al_create_display(DISPLAY_W, DISPLAY_H);
 	allegro_check(display, "al_create_display()");
 
