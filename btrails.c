@@ -35,8 +35,8 @@ int btrails_init()
 
 	for (i = 0; i < MAX_BTRAILS; ++i) {
 		for (j = 0; j < MAX_BELEMS; ++j) {
-			trails[i].pos[j].x = 0.0f;
-			trails[i].pos[j].y = 0.0f;
+			trails[i].pos[j].x = BUBBLE_X_OFFSCREEN;
+			trails[i].pos[j].y = BUBBLE_Y_OFFSCREEN;
 		}
 		trails[i].top = 0;
 

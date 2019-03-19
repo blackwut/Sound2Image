@@ -90,10 +90,8 @@
 
 
 //------------------------------------------------------------------------------
-// BUBBLE SETTINGS
+// BUBBLE DISPLAY SETTINGS
 //------------------------------------------------------------------------------
-#define BUBBLE_X_OFFSCREEN			-100.0f	// x point of offscreen bubble
-#define BUBBLE_Y_OFFSCREEN			-100.0f	// y point of offscreen bubble
 #define BUBBLE_THICKNESS			2		// thickness of bubble circle
 #define BUBBLE_RADIUS 				8		// radius of a bubble
 #define BUBBLE_ALPHA_FILLED			200		// alpha chann. of filled circle

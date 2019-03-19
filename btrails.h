@@ -26,6 +26,10 @@
 #define MAX_BTRAILS			32
 #define MAX_BELEMS			8
 
+// Bubble (x, y) offscreen
+#define BUBBLE_X_OFFSCREEN			-100.0f	// x point of offscreen bubble
+#define BUBBLE_Y_OFFSCREEN			-100.0f	// y point of offscreen bubble
+
 
 //------------------------------------------------------------------------------
 // BRAILS GLOBAL MACROS
