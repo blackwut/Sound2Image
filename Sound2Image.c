@@ -873,6 +873,7 @@ void * task_fft(void * arg)
 	return NULL;
 }
 
+
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
@@ -910,12 +911,20 @@ void * task_bubble(void * arg)
 			pthread_cond_wait(&cond_fft_consumers, &mux_fft);
 		}
 
+		// if the task is active calculate the bubble values
 		if (user_id < active_tasks_local) {
+			// calculate the range of samples assigned to the bubble
 			range = bubble_samples_range(user_id, active_tasks_local);
+			// calculate the new value to compute the y position of the bubble
 			val = bubble_calculate_val(user_id, val, range);
+			// calculate the color_id to give a color to the bubble
 			color_id = MAX_COLORS * (user_id / (float) active_tasks_local);
+			// calculate the x position of the bubble using the current spacing
 			x = (user_id + 1) * bubble_spacing;
+			// calculate the y position of the bubble using a low-pass filter
 			y = DISPLAY_TRAILS_Y + DISPLAY_TRAILS_H - val * DISPLAY_TRAILS_H;
+		
+		// if the task is not active, make the bubble offscreen
 		} else {
 			range.from = 0;
 			range.to = 0;
