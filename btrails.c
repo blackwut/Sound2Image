@@ -39,7 +39,7 @@ int btrails_init()
 			trails[i].pos[j].y = 0.0f;
 		}
 		trails[i].top = 0;
-		
+
 		ret = pthread_mutex_init(&(trails[i].lock), NULL);
 		if (ret != 0) {
 			return BTRAILS_ERROR;
@@ -56,7 +56,7 @@ int btrails_init()
 
 //------------------------------------------------------------------------------
 //
-// This function returns a "btrail_point" containing the coordinates (x, y) of the 
+// This function returns a "btrail_point" containing the position (x, y) of the
 // "bubble_id" bubble in the specified "trail_id" trail.
 //
 //------------------------------------------------------------------------------

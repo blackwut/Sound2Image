@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdlib.h> 
+#include <stdlib.h>
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_audio.h>
 #include <allegro5/allegro_acodec.h>
@@ -223,7 +223,7 @@ void allegro_init()
 	al_set_new_window_title(WINDOW_TITLE);
 	al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
 	al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
-	al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR | 
+	al_set_new_bitmap_flags(ALLEGRO_MIN_LINEAR |
 							ALLEGRO_MAG_LINEAR |
 							ALLEGRO_PIXEL_FORMAT_ANY_WITH_ALPHA);
 	display = al_create_display(DISPLAY_W, DISPLAY_H);
@@ -919,13 +919,13 @@ void * task_bubble(void * arg)
 			range = bubble_samples_range(user_id, active_tasks_local);
 			// calculate the new value to compute the y position of the bubble
 			val = bubble_calculate_val(user_id, val, range);
-			// calculate the color_id to give a color to the bubble
+			// calculate the color_id
 			color_id = MAX_COLORS * (user_id / (float) active_tasks_local);
 			// calculate the x position of the bubble using the current spacing
 			x = (user_id + 1) * bubble_spacing;
 			// calculate the y position of the bubble using a low-pass filter
 			y = DISPLAY_TRAILS_Y + DISPLAY_TRAILS_H - val * DISPLAY_TRAILS_H;
-		
+
 		// if the task is not active, make the bubble offscreen
 		} else {
 			range.from = 0;
@@ -945,9 +945,9 @@ void * task_bubble(void * arg)
 		// Put a new bubble into the circular buffer
 		btrails_lock(user_id);
 		btrails_set_color(user_id,
-						  colors[color_id][0],
-						  colors[color_id][1],
-						  colors[color_id][2]);
+						  COLORS[color_id][0],
+						  COLORS[color_id][1],
+						  COLORS[color_id][2]);
 		btrails_set_freq(user_id, range.to * samplerate / STREAM_SAMPLES);
 		btrails_put_bubble_pos(user_id, x, y);
 		btrails_unlock(user_id);
@@ -1029,18 +1029,17 @@ void * task_display(void * arg)
 //------------------------------------------------------------------------------
 void * task_input(void * arg)
 {
-	const size_t id = ptask_id(arg);
-	int done_local = FALSE;
-	size_t i;
-	ALLEGRO_EVENT event;
-	int keys[ALLEGRO_KEY_MAX];
+	const size_t id = ptask_id(arg);	// id of this task
+	int done_local = FALSE;				// local value of done
+	size_t i;							// index of ALLEGRO_KEY_# "for loop"
+	ALLEGRO_EVENT event;				// allegro event received
+	int keys[ALLEGRO_KEY_MAX];			// array of key state
 
 	memset(keys, 0, sizeof(keys));
 
 	ptask_activate(id);
 
 	while (!done_local) {
-		memset(&event, 0, sizeof(ALLEGRO_EVENT));
 		al_wait_for_event_timed(input_queue, &event, TASK_INPUT_EVENT_TIME);
 
 		if (keys[ALLEGRO_KEY_ESCAPE]) {

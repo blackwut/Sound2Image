@@ -120,14 +120,14 @@
 
 
 //------------------------------------------------------------------------------
-// EXIT CONSTANTS 
+// EXIT CONSTANTS
 //------------------------------------------------------------------------------
 #define EXIT_NO_FILENAME			128		// filename missing errorcode
 #define EXIT_FFT_AUDIO_ERROR		128		// fft_audio generic errorcode
 #define EXIT_FFT_AUDIO_OPEN_FILE	130		// fft_audio open file errorcode
 #define EXIT_FFT_AUDIO_SAMPLERATE	131		// unsupported samplerate errorcode
 #define EXIT_FFT_AUDIO_CHANNELS		132		// unsupported channels errorcode
-#define EXIT_BTRAILS_ERROR			133		// brails generic errorcode 
+#define EXIT_BTRAILS_ERROR			133		// brails generic errorcode
 #define EXIT_PTASK_ERROR			134		// ptask generic errorcode
 #define EXIT_PTASK_CREATE			135		// ptask create task errorcode
 #define EXIT_PTASK_JOIN				136		// ptask join task errorcode
@@ -135,10 +135,14 @@
 
 
 //------------------------------------------------------------------------------
-// COLORS 
+// COLORS
 //------------------------------------------------------------------------------
-#define MAX_COLORS 32
-const unsigned char colors[MAX_COLORS][3] = {
+// Display background color
+const unsigned char BACK_COLOR[3] = {32, 32, 32};
+
+// Bubble colors
+#define MAX_COLORS 32							// number of encoded COLORS
+const unsigned char COLORS[MAX_COLORS][3] = {	// encoded colors in RGB array
 	//Gray
 	{ 93, 109, 126}, { 86, 101, 115}, { 52,  73,  94}, { 46,  64,  83},
 	// Blue
@@ -156,5 +160,7 @@ const unsigned char colors[MAX_COLORS][3] = {
 	// Purple
 	{136,  78, 160}, {155,  89, 182}, {125,  60, 152}, {142,  68, 173},
 };
+
+
 
 #endif
