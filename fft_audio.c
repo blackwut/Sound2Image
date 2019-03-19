@@ -413,7 +413,7 @@ int fft_audio_load_next_frame()
 
 //------------------------------------------------------------------------------
 //
-// This function computes the FFT of the current frame values applying the 
+// This function computes the FFT of the current frame values applying the
 // windowing method provided.
 //
 //------------------------------------------------------------------------------

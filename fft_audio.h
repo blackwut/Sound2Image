@@ -2,7 +2,7 @@
 //
 // FFT_AUDIO
 //
-// LIBRARY TO SIMPLIFY THE LOADING OF AN AUDIO FILE AND THE COMPUTATION OF THE 
+// LIBRARY TO SIMPLIFY THE LOADING OF AN AUDIO FILE AND THE COMPUTATION OF THE
 // FAST FOURIER TRANSFORM ON IT IN A WINDOWED FASHION.
 //
 //------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ int fft_audio_load_next_frame();
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function computes the FFT of the current frame values applying the 
+// This function computes the FFT of the current frame values applying the
 // windowing method provided.
 //
 // PARAMETERS

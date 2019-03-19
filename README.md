@@ -10,14 +10,14 @@ Sound2Image is a music visualizer Real-Time System project.
 ```bash
 brew install allegro
 brew install fftw --without-fortran
-brew install libsndfile 
+brew install libsndfile
 ```
 
 ## Ubuntu
 ```bash
 sudo apt install liballegro5-dev
 sudo apt install fftw-dev
-sudo apt install libsndfile1-dev 
+sudo apt install libsndfile1-dev
 ```
 
 

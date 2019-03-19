@@ -4,7 +4,7 @@ CC	= gcc
 
 ifeq ($(UNAME_S), Darwin)
 	CFLAGS = --std=c99 -g -Wall -pedantic
-else 
+else
 	CFLAGS = --std=gnu99 -g -Wall -pedantic
 endif
 
