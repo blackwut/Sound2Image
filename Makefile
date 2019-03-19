@@ -3,7 +3,7 @@ UNAME_S := $(shell uname -s)
 CC	= gcc
 
 ifeq ($(UNAME_S), Darwin)
-	CFLAGS = --std=c99 -g -Wall -pedantic #-fno-omit-frame-pointer -fsanitize=address
+	CFLAGS = --std=c99 -g -Wall -pedantic
 else 
 	CFLAGS = --std=gnu99 -g -Wall -pedantic
 endif
