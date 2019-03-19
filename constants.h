@@ -1,25 +1,56 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
-#define FALSE						0
-#define TRUE						1
+//------------------------------------------------------------------------------
+// TRUE / FALSE DEFINITIONS
+//------------------------------------------------------------------------------
+#define FALSE		0
+#define TRUE		1
 
-#define WINDOW_TITLE "Sound2Image - Alberto Ottimo"
-#define FONT_NAME "font/modum.ttf"
-#define FONT_SIZE_BIG 20
-#define FONT_SIZE_SMALL 12
 
-#define BUBBLES_TEXT_SIZE			64
-#define TIMER_TEXT_SIZE				16
-#define GAIN_TEXT_SIZE				16
+//------------------------------------------------------------------------------
+// FONT
+//------------------------------------------------------------------------------
+#define FONT_NAME			"font/modum.ttf"
+#define FONT_SIZE_BIG		18
+#define FONT_SIZE_SMALL		12
 
-#define DISPLAY_W					960
-#define DISPLAY_H					480
-#define DISPLAY_AUDIO_X				0
-#define DISPLAY_AUDIO_Y				64
-#define DISPLAY_AUDIO_W				DISPLAY_W
-#define DISPLAY_AUDIO_H				(DISPLAY_H - (DISPLAY_AUDIO_Y * 2))
-#define FRAMERATE					50
+
+//------------------------------------------------------------------------------
+// WINDOW / DISPLAY SETTINGS
+//------------------------------------------------------------------------------
+#define WINDOW_TITLE		"Sound2Image - Alberto Ottimo"
+#define DISPLAY_W			960			// display width size in pixel
+#define DISPLAY_H			480			// display height size in pixel
+#define DISPLAY_TRAILS_X	0			// starting x point of trails display
+#define DISPLAY_TRAILS_Y	64			// starting y point of trails display
+#define DISPLAY_TRAILS_W	DISPLAY_W	// trails display width size in pixel
+#define DISPLAY_TRAILS_H	(DISPLAY_H - (DISPLAY_TRAILS_Y * 2)) // height size
+
+//	<---------------- 960 px ---------------->
+//	__________________________________________
+//	|64px                                     |   ^
+//	|_________________________________________|   |
+//	|                                         |   |
+//	|                                         |   |
+//	|             TRAILS DISPLAY              | 480 px
+//	|                                         |   |
+//	|                                         |   |
+//	|_________________________________________|   |
+//	|64px            USER INFO                |   |
+//	|_________________________________________|   v
+
+
+//------------------------------------------------------------------------------
+// PERIODIC TASKS SETTINGS
+//------------------------------------------------------------------------------
+#define TASK_FFT_PERIOD				20
+#define TASK_FFT_DEADLINE			20
+#define TASK_FFT_PRIORITY			90
+
+#define TASK_BUBBLE_PERIOD			20
+#define TASK_BUBBLE_DEADLINE		20
+#define TASK_BUBBLE_PRIORITY		60
 
 #define TASK_INPUT_PERIOD			30
 #define TASK_INPUT_DEADLINE			30
@@ -30,15 +61,13 @@
 #define TASK_DISPLAY_DEADLINE		30
 #define TASK_DISPLAY_PRIORITY		30
 
-#define TASK_FFT_PERIOD				20
-#define TASK_FFT_DEADLINE			20
-#define TASK_FFT_PRIORITY			90
-
-#define TASK_BUBBLE_PERIOD			20
-#define TASK_BUBBLE_DEADLINE		20
-#define TASK_BUBBLE_PRIORITY		60
 
 
+
+
+//------------------------------------------------------------------------------
+// USER INFORMATION SETTINGS
+//------------------------------------------------------------------------------
 #define BUBBLES_INFO_TEXT_ALIGN		ALLEGRO_ALIGN_LEFT
 #define BUBBLES_INFO_X 				10
 #define BUBBLES_INFO_Y 				0
@@ -57,50 +86,72 @@
 
 #define USER_INFO_TEXT				"[UP: Bigger]  [DOWN: Smaller]  " \
 									"[LEFT: Less]  [RIGHT: More]  " \
-									"[PLUS: Vol. Up]  [MINUS: Vol. Down]"
+									"[PLUS: Vol. Up]  [MINUS: Vol. Down]  " \
+									"[1-7: Windowing Method]"
 #define USER_INFO_TEXT_ALIGN 		ALLEGRO_ALIGN_CENTER
 #define USER_INFO_X 				DISPLAY_W / 2
-#define USER_INFO_Y 				DISPLAY_H - 32
-
-#define FRAGMENT_COUNT				8
-#define FRAGMENT_SAMPLES			882 // Must be a diveder of both FRAGMENT_SAMPLERATE and 1000/FRAMERATE
-#define FRAGMENT_DEPTH				ALLEGRO_AUDIO_DEPTH_FLOAT32
-
-#define BUBBLE_TASKS_MIN 			8
-#define BUBBLE_TASKS_BASE 			24
-#define BUBBLE_TASKS_MAX 			32
-#define BUBBLE_FILTER 				0.5
-
-#define BUBBLE_X_OFFSCREEN			-100.0f
-#define BUBBLE_Y_OFFSCREEN			-100.0f
-#define BUBBLE_THICKNESS			2
-#define BUBBLE_RADIUS 				8
-#define BUBBLE_ALPHA_FILLED			200
-#define BUBBLE_ALPHA_STROKE			255
-
-#define BUBBLE_SCALE_MIN			0.5f
-#define BUBBLE_SCALE_BASE			1.0f
-#define BUBBLE_SCALE_MAX			2.0f
-#define BUBBLE_SCALE_STEP			0.1f
-
-#define GAIN_MIN					0
-#define GAIN_BASE					50
-#define GAIN_MAX					100
-#define GAIN_STEP					1
+#define USER_INFO_Y 				DISPLAY_H - 24
 
 
-#define EXIT_NO_FILENAME			128
-#define EXIT_FFT_AUDIO_ERROR		128
-#define EXIT_FFT_AUDIO_OPEN_FILE	130
-#define EXIT_FFT_AUDIO_SAMPLERATE	131
-#define EXIT_FFT_AUDIO_CHANNELS		132
-#define EXIT_BTRAILS_ERROR			133
-#define EXIT_PTASK_ERROR			134
-#define EXIT_PTASK_CREATE			135
-#define EXIT_PTASK_JOIN				136
-#define EXIT_ALLEGRO_ERROR			137
+//------------------------------------------------------------------------------
+// ALLEGRO STREAM SETTINGS
+//------------------------------------------------------------------------------
+// number of buffers of the stream
+#define STREAM_FRAME_COUNT		8
+// Must be a divider of audio.samplerate and TASK_FFT_PERIOD
+#define STREAM_SAMPLES			882
+// Data type of the stream audio values
+#define STREAM_DATA_TYPE		ALLEGRO_AUDIO_DEPTH_FLOAT32
 
 
+//------------------------------------------------------------------------------
+// BUBBLE SETTINGS
+//------------------------------------------------------------------------------
+#define BUBBLE_X_OFFSCREEN			-100.0f		// x point of offscreen bubble
+#define BUBBLE_Y_OFFSCREEN			-100.0f		// y point of offscreen bubble
+#define BUBBLE_THICKNESS			2			// thickness of bubble circle
+#define BUBBLE_RADIUS 				8			// radius of a bubble
+#define BUBBLE_ALPHA_FILLED			200			// alpha chann. of filled circle
+#define BUBBLE_ALPHA_STROKE			255			// alpha chann. of circle
+
+
+//------------------------------------------------------------------------------
+// USER INPUT MIN, BASE, MAX, STEP VALUES
+//------------------------------------------------------------------------------
+#define BUBBLE_TASKS_MIN 			8		// minimum amount of bubbles
+#define BUBBLE_TASKS_BASE 			24		// starting amount of bubbles
+#define BUBBLE_TASKS_MAX 			32		// maximum amount of bubbles
+#define BUBBLE_LPASS_PARAM			0.5		// low pass filter parameter
+
+#define BUBBLE_SCALE_MIN			0.5f	// minimum scale factor of bubbles
+#define BUBBLE_SCALE_BASE			1.0f	// starting scale factor of bubbles
+#define BUBBLE_SCALE_MAX			2.0f	// maximum scale factor of bubbles
+#define BUBBLE_SCALE_STEP			0.1f	// incr/decr step of scale factor
+
+#define GAIN_MIN					0		// minimum value of gain volume
+#define GAIN_BASE					50		// starting value of gain volume
+#define GAIN_MAX					100		// maximum value of gain volume
+#define GAIN_STEP					1		// incr/decr step of scale volume
+
+
+//------------------------------------------------------------------------------
+// EXIT CONSTANTS 
+//------------------------------------------------------------------------------
+#define EXIT_NO_FILENAME			128		// filename missing errorcode
+#define EXIT_FFT_AUDIO_ERROR		128		// fft_audio generic errorcode
+#define EXIT_FFT_AUDIO_OPEN_FILE	130		// fft_audio open file errorcode
+#define EXIT_FFT_AUDIO_SAMPLERATE	131		// unsupported samplerate errorcode
+#define EXIT_FFT_AUDIO_CHANNELS		132		// unsupported channels errorcode
+#define EXIT_BTRAILS_ERROR			133		// brails generic errorcode 
+#define EXIT_PTASK_ERROR			134		// ptask generic errorcode
+#define EXIT_PTASK_CREATE			135		// ptask create task errorcode
+#define EXIT_PTASK_JOIN				136		// ptask join task errorcode
+#define EXIT_ALLEGRO_ERROR			137		// allegro generic errorcode
+
+
+//------------------------------------------------------------------------------
+// COLORS 
+//------------------------------------------------------------------------------
 #define MAX_COLORS 32
 const unsigned char colors[MAX_COLORS][3] = {
 	//Gray

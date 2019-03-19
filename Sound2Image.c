@@ -411,7 +411,7 @@ void sound2image_init_variables(char * filename)
 	pthread_mutex_init(&mux_windowing, NULL);
 
 	fft_audio_check(fft_audio_init(filename,
-								   FRAGMENT_SAMPLES,
+								   STREAM_SAMPLES,
 								   fft_audio_hamming),
 					"File does not exits or it is not compatible");
 	samplerate = fft_audio_get_samplerate();
@@ -420,10 +420,10 @@ void sound2image_init_variables(char * filename)
 	allegro_init();
 	al_set_target_bitmap(NULL);
 
-	stream = al_create_audio_stream(FRAGMENT_COUNT,
-									FRAGMENT_SAMPLES,
+	stream = al_create_audio_stream(STREAM_FRAME_COUNT,
+									STREAM_SAMPLES,
 									samplerate,
-									ALLEGRO_AUDIO_DEPTH_FLOAT32,
+									STREAM_DATA_TYPE,
 									allegro_channel_conf_with(channels));
 	al_set_audio_stream_playmode(stream, ALLEGRO_PLAYMODE_ONCE);
 	allegro_stream_set_gain(gain);
@@ -558,7 +558,7 @@ fft_audio_range bubble_samples_range(const size_t id,
 	fft_audio_range range;		// the range [from, to] to be calculated
 
 	if (id < n) {
-		step = log2f(FRAGMENT_SAMPLES / 2 - n) / (n + 1);
+		step = log2f(STREAM_SAMPLES / 2 - n) / (n + 1);
 		range.from = (size_t)lroundf(powf(2, (id + 1) * step)) + id + 1;
 		range.to = (size_t)lround(powf(2, (id + 2) * step)) + id + 2;
 	} else {
@@ -606,7 +606,7 @@ float bubble_calculate_val(const size_t id,
 	val = (val - valMin) / (valMax - valMin);
 
 	if (isfinite(val)) {
-		return val_old * BUBBLE_FILTER + (1.0f - BUBBLE_FILTER) * val;
+		return val_old * BUBBLE_LPASS_PARAM + (1.0f - BUBBLE_LPASS_PARAM) * val;
 	}
 
 	return 0.0f;
@@ -649,7 +649,7 @@ void draw_trail(const size_t id,
 						BUBBLE_ALPHA_STROKE);
 	al_draw_textf(font_small, color,
 				  (id + 1) * spacing,
-				  DISPLAY_AUDIO_H + DISPLAY_AUDIO_Y + 20,
+				  DISPLAY_TRAILS_H + DISPLAY_TRAILS_Y + 20,
 				  ALLEGRO_ALIGN_CENTER,
 				  "%zu", freq);
 
@@ -840,7 +840,7 @@ void * task_fft(void * arg)
 		ret = allegro_stream_fill_frame();
 		if (ret == TRUE) {
 			// Update the elapsed audio time
-			MUTEX_EXP(time_ms += FRAGMENT_SAMPLES * 1000/ samplerate,
+			MUTEX_EXP(time_ms += STREAM_SAMPLES * 1000/ samplerate,
 					 mux_time_ms);
 
 			// Load the curent windowing method and compute the FFT
@@ -915,7 +915,7 @@ void * task_bubble(void * arg)
 			val = bubble_calculate_val(user_id, val, range);
 			color_id = MAX_COLORS * (user_id / (float) active_tasks_local);
 			x = (user_id + 1) * bubble_spacing;
-			y = DISPLAY_AUDIO_Y + DISPLAY_AUDIO_H - val * DISPLAY_AUDIO_H;
+			y = DISPLAY_TRAILS_Y + DISPLAY_TRAILS_H - val * DISPLAY_TRAILS_H;
 		} else {
 			range.from = 0;
 			range.to = 0;
@@ -937,7 +937,7 @@ void * task_bubble(void * arg)
 						  colors[color_id][0],
 						  colors[color_id][1],
 						  colors[color_id][2]);
-		btrails_set_freq(user_id, range.to * samplerate / FRAGMENT_SAMPLES);
+		btrails_set_freq(user_id, range.to * samplerate / STREAM_SAMPLES);
 		btrails_put_bubble_pos(user_id, x, y);
 		btrails_unlock(user_id);
 
