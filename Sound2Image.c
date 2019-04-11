@@ -91,7 +91,7 @@ int done;							// if TRUE the program stops
 size_t active_tasks;				// num. of tasks active
 size_t gain;						// volume of audio listening
 fft_audio_windowing windowing;		// windowing method of FFT
-size_t time_ms;						// elapsed time of audio listening
+size_t elapsed_time;						// elapsed time of audio listening
 float bubble_scale;					// scale factor of displayed bubbles
 ALLEGRO_AUDIO_STREAM * stream;		// audio stream object
 
@@ -100,7 +100,7 @@ pthread_mutex_t mux_done;			// mutex associated to variable done
 pthread_mutex_t mux_active_tasks;	// mutex associated to variable active_tasks
 pthread_mutex_t mux_gain;			// mutex associated to variable gain
 pthread_mutex_t mux_windowing;		// mutex associated to variable windowing
-pthread_mutex_t mux_time_ms;		// mutex associated to variable time_ms
+pthread_mutex_t mux_elapsed_time;		// mutex associated to variable elapsed_time
 pthread_mutex_t mux_bubble_scale;	// mutex associated to variable bubble_scale
 
 //------------------------------------------------------------------------------
@@ -397,12 +397,12 @@ void sound2image_init_variables(char * filename)
 	fft_counter = 0;
 	active_tasks = BUBBLE_TASKS_BASE;
 	bubble_scale = BUBBLE_SCALE_BASE;
-	time_ms = 0;
+	elapsed_time = 0;
 	gain = GAIN_BASE;
 	windowing = fft_audio_rectangular;
 
 	pthread_mutex_init(&mux_done, NULL);
-	pthread_mutex_init(&mux_time_ms, NULL);
+	pthread_mutex_init(&mux_elapsed_time, NULL);
 	pthread_mutex_init(&mux_bubble_scale, NULL);
 	pthread_mutex_init(&mux_active_tasks, NULL);
 
@@ -499,7 +499,7 @@ void sound2image_free()
 {
 	pthread_mutex_destroy(&mux_active_tasks);
 	pthread_mutex_destroy(&mux_bubble_scale);
-	pthread_mutex_destroy(&mux_time_ms);
+	pthread_mutex_destroy(&mux_elapsed_time);
 	pthread_mutex_destroy(&mux_done);
 	pthread_cond_destroy(&cond_fft_producer);
 	pthread_cond_destroy(&cond_fft_consumers);
@@ -757,7 +757,7 @@ void draw_time_info()
 	size_t seconds;
 	size_t milliseconds;
 
-	MUTEX_EXP(milliseconds = time_ms, mux_time_ms);
+	MUTEX_EXP(milliseconds = elapsed_time, mux_elapsed_time);
 
 	minutes = TIME_MSEC_TO_SEC(milliseconds) / 60;
 	seconds = TIME_MSEC_TO_SEC(milliseconds) % 60;
@@ -842,8 +842,8 @@ void * task_fft(void * arg)
 		ret = allegro_stream_fill_frame();
 		if (ret == TRUE) {
 			// Update the elapsed audio time
-			MUTEX_EXP(time_ms += STREAM_SAMPLES * 1000/ samplerate,
-					 mux_time_ms);
+			MUTEX_EXP(elapsed_time += STREAM_SAMPLES * 1000/ samplerate,
+					 mux_elapsed_time);
 
 			// Load the curent windowing method and compute the FFT
 			MUTEX_EXP(windowing_local = windowing, mux_windowing);
@@ -1106,11 +1106,11 @@ void * task_input(void * arg)
 		}
 
 		if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
-			keys[event.keyboard.keycode] = 1;
+			keys[event.keyboard.keycode] = TRUE;
 		}
 
 		if (event.type == ALLEGRO_EVENT_KEY_UP) {
-			keys[event.keyboard.keycode] = 0;
+			keys[event.keyboard.keycode] = FALSE;
 		}
 
 		MUTEX_EXP(done_local = done, mux_done);
