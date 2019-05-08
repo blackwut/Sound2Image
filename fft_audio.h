@@ -65,10 +65,10 @@ typedef struct {
 //
 // RETURN
 // It returns:
-// - FFT_AUDIO_ERROR_FILE if the file does not exists or is not accessibile.
-// - FFT_AUDIO_ERROR_SAMPLERATE if audio samplerate is greather than 44100
+// - FFT_AUDIO_ERROR_FILE if the file does not exists or is not accessible.
+// - FFT_AUDIO_ERROR_SAMPLERATE if audio samplerate is greater than 44100
 // - FFT_AUDIO_ERROR_CHANNELS if audio channels are more than 2
-// - FFT_AUDIO_SUCCESS wtherwhise
+// - FFT_AUDIO_SUCCESS otherwise
 //
 //------------------------------------------------------------------------------
 int fft_audio_init(const char filename[],

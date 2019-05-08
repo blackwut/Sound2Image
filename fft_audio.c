@@ -298,7 +298,7 @@ static int fft_audio_read_data()
 
 //------------------------------------------------------------------------------
 //
-// This function initialize alla data required to perform the FFT and to extract
+// This function initialize all data required to perform the FFT and to extract
 // statistics from an audio file.
 // It opens the file provided, initializes the audio data and the data needed to
 // perform the FFT.
