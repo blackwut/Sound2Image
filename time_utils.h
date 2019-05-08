@@ -125,7 +125,7 @@ void time_diff(struct timespec * td,
 // structure.
 //
 // PARAMETERS
-// req: the time structure containing the suspeding amount of time
+// req: the time structure containing the suspending amount of time
 //
 // RETURN
 // It returns -1 if an error occurred, otherwise 0.
