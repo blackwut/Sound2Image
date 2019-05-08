@@ -8,7 +8,7 @@
 //------------------------------------------------------------------------------
 typedef struct {
 	btrail_point pos[MAX_BELEMS];	// (x, y) bubble coordinates of the trail
-	size_t top;						// Last bubble coordinates index enqueued
+	size_t top;						// Last enqueued bubble index
 	size_t freq;					// Frequency assigned to the trail
 	btrail_color color;				// RGB color of the bubbles in the trail
 	pthread_mutex_t lock;			// Mutex to protect the trail
