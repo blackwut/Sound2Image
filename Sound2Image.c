@@ -8,11 +8,12 @@
 #include <allegro5/allegro_ttf.h>
 #include <pthread.h>
 #include <math.h>
+
 #include "constants.h"
+#include "time_utils.h"
 #include "fft_audio.h"
 #include "btrails.h"
 #include "ptask.h"
-#include "time_utils.h"
 
 
 //------------------------------------------------------------------------------
@@ -80,6 +81,10 @@ void * task_input(void * arg);
 //------------------------------------------------------------------------------
 // SOUND2IMAGE GLOBAL DATA
 //------------------------------------------------------------------------------
+
+extern const unsigned char BACK_COLOR[3];			// display background color
+extern const unsigned char COLORS[MAX_COLORS][3];	// global RGB colors
+
 ALLEGRO_DISPLAY * display;			// the main area of drawing
 ALLEGRO_EVENT_QUEUE * input_queue;	// queue managing user input events
 ALLEGRO_COLOR font_color;			// the color of drawn text
@@ -91,7 +96,7 @@ int done;							// if TRUE the program stops
 size_t active_tasks;				// num. of tasks active
 size_t gain;						// volume of audio listening
 fft_audio_windowing windowing;		// windowing method of FFT
-size_t elapsed_time;						// elapsed time of audio listening
+size_t elapsed_time;				// elapsed time of audio listening
 float bubble_scale;					// scale factor of displayed bubbles
 ALLEGRO_AUDIO_STREAM * stream;		// audio stream object
 
@@ -100,7 +105,7 @@ pthread_mutex_t mux_done;			// mutex associated to variable done
 pthread_mutex_t mux_active_tasks;	// mutex associated to variable active_tasks
 pthread_mutex_t mux_gain;			// mutex associated to variable gain
 pthread_mutex_t mux_windowing;		// mutex associated to variable windowing
-pthread_mutex_t mux_elapsed_time;		// mutex associated to variable elapsed_time
+pthread_mutex_t mux_elapsed_time;	// mutex associated to variable elapsed_time
 pthread_mutex_t mux_bubble_scale;	// mutex associated to variable bubble_scale
 
 //------------------------------------------------------------------------------
@@ -121,8 +126,8 @@ size_t fft_counter;					// variable to make synchronization
 //
 // DESCRIPTION
 // This function checks if a fft_audio function returned with an error. If an
-// error occurred, it prints an error message and exits with the corresponding
-// error value.
+// error occurred, it prints an error message with the provided description and
+// exits the program with the corresponding error value.
 //
 // PARAMETERS
 // ret: the return value of the fft_audio function
@@ -145,12 +150,12 @@ void fft_audio_check(int ret,
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function checks if a btrail function returned with an error. If an
-// error occurred, it prints an error message and exits with the corresponding
-// error value.
+// This function checks if a btrails function returned with an error. If an
+// error occurred, it prints an error message with the provided description and
+// exits the program with the corresponding error value.
 //
 // PARAMETERS
-// ret: the return value of the btrail function
+// ret: the return value of the btrails function
 // description: user error info description
 //
 //------------------------------------------------------------------------------
@@ -167,8 +172,8 @@ void btrails_check(int ret,
 //
 // DESCRIPTION
 // This function checks if a ptask function returned with an error. If an error
-// occurred, it prints an error message and exits with the corresponding error
-// value.
+// occurred, it prints an error message with the provided description and exits
+// the program with the corresponding error value.
 //
 // PARAMETERS
 // ret: the return value of the ptask function
@@ -191,8 +196,8 @@ void ptask_check(int ret,
 //
 // DESCRIPTION
 // This function checks if a Allegro function returned with an error. If an
-// error occurred, it prints an error message and exits with the corresponding
-// error value.
+// error occurred, it prints an error message with the provided description and
+// exits the program with the corresponding error value.
 //
 // PARAMETERS
 // ret: the return value of the Allegro function
@@ -211,8 +216,7 @@ void allegro_check(bool ret,
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function initializes and configure all Allegro addon and all global
-// variables used.
+// This function initializes and configure all Allegro variables and addon used.
 //
 //------------------------------------------------------------------------------
 void allegro_init()
@@ -263,7 +267,7 @@ void allegro_init()
 // channels: the number of channel
 //
 // RETURN
-// The ALLEGRO_CHANNEL_CONF corresponding to the number of channels
+// The ALLEGRO_CHANNEL_CONF enum corresponding to the number of channels
 //
 //------------------------------------------------------------------------------
 ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
@@ -275,7 +279,7 @@ ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function set the given gain to the stream audio.
+// This function set the given gain value to the stream audio.
 //
 // PARAMETERS
 // val: the value of the new gain to set
@@ -295,8 +299,8 @@ void allegro_stream_set_gain(size_t val)
 // provided by the streaming object.
 //
 // RETURN
-// It returns TRUE if the frame is copied into the buffer.
-// Otherwise it return FALSE.
+// It returns TRUE if the frame have been copied into the buffer.
+// Otherwise it returns FALSE.
 //
 //------------------------------------------------------------------------------
 int allegro_stream_fill_frame()
@@ -325,7 +329,7 @@ int allegro_stream_fill_frame()
 // b = d.b * (1 - s.a) + s.b * 1
 // a = d.a * (1 - s.a) + s.a * 1
 //
-// Where "d" is the destrination bitmap/display pixel color and "s" is the pixel
+// Where "d" is the destination bitmap/display pixel color and "s" is the pixel
 // color to be drawn.
 //
 //------------------------------------------------------------------------------
@@ -346,7 +350,7 @@ void allegro_blender_mode_standard()
 // b = d.b * (1 - s.a) + s.b * s.a
 // a = d.a * (1 - s.a) + s.a * s.a
 //
-// Where "d" is the destrination bitmap/display pixel color and "s" is the pixel
+// Where "d" is the destination bitmap/display pixel color and "s" is the pixel
 // color to be drawn.
 //
 //------------------------------------------------------------------------------
@@ -381,9 +385,9 @@ void allegro_free()
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function initializes all variables used by the program including:
-// fft_audio, btrail, ptask and Allegro libraries. It also open the audio file
-// located in "filename".
+// This function initializes all variables used by the program and fft_audio,
+// Allegro and btrails libraries. It also open the audio file located in 
+// "filename".
 //
 // PARAMETERS
 // filename: the relative path of the audio file
@@ -393,6 +397,7 @@ void sound2image_init_variables(char * filename)
 {
 	size_t channels;		// number of channels of the audio file
 
+	// Variables
 	done = FALSE;
 	fft_counter = 0;
 	active_tasks = BUBBLE_TASKS_BASE;
@@ -412,6 +417,7 @@ void sound2image_init_variables(char * filename)
 	pthread_mutex_init(&mux_gain, NULL);
 	pthread_mutex_init(&mux_windowing, NULL);
 
+	// fft_audio
 	fft_audio_check(fft_audio_init(filename,
 								   STREAM_SAMPLES,
 								   fft_audio_hamming),
@@ -419,6 +425,7 @@ void sound2image_init_variables(char * filename)
 	samplerate = fft_audio_get_samplerate();
 	channels = fft_audio_get_channels();
 
+	// Allegro
 	allegro_init();
 	al_set_target_bitmap(NULL);
 
@@ -433,6 +440,7 @@ void sound2image_init_variables(char * filename)
 												  al_get_default_mixer()),
 				  "al_attach_audio_stream_to_mixer()");
 
+	// btrails
 	btrails_check(btrails_init(), "Cannot create Bubble Trails");
 }
 
@@ -440,7 +448,7 @@ void sound2image_init_variables(char * filename)
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function create all periodic tasks needed for the execution.
+// This function create all periodic tasks needed for execution.
 //
 //------------------------------------------------------------------------------
 void sound2image_create_tasks()
@@ -492,7 +500,7 @@ void sound2image_waits_tasks()
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function relase all variable memory created at runtime.
+// This function releases all variables and libraries used.
 //
 //------------------------------------------------------------------------------
 void sound2image_free()
@@ -550,7 +558,7 @@ float bubble_spacing_with(size_t n)
 //
 // RETURN
 // The range [from, to] of samples for a given bubble.
-// If the buble id is greather or equal to "n", the range returned is [0, 0].
+// If the bubble id is greater or equal to "n", the range returned is [0, 0].
 //
 //------------------------------------------------------------------------------
 fft_audio_range bubble_samples_range(const size_t id,
@@ -889,7 +897,7 @@ void * task_fft(void * arg)
 void * task_bubble(void * arg)
 {
 	const size_t id = ptask_id(arg);			// id of this periodic task
-	const size_t user_id = ptask_user_id(arg);	// user id of this periodic task
+	const size_t user_id = ptask_task_id(arg);	// user id of this periodic task
 	int done_local = FALSE;						// local value of done
 	size_t active_tasks_local;					// local value of active tasks
 	float bubble_spacing;						// space between two bubbles
@@ -1099,9 +1107,7 @@ void * task_input(void * arg)
 		// Reading numbers from 1 to 7
 		for (i = ALLEGRO_KEY_1; i < ALLEGRO_KEY_8; ++i) {
 			if (keys[i]) {
-				MUTEX_LOCK(mux_windowing);
-				windowing = i - ALLEGRO_KEY_0 - 1;
-				MUTEX_UNLOCK(mux_windowing);
+				MUTEX_EXP(windowing = (i - ALLEGRO_KEY_0 - 1), mux_windowing);
 			}
 		}
 
@@ -1128,8 +1134,8 @@ void * task_input(void * arg)
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This is the main function that calls all the functions needed to start the
-// program.
+// This is the main function that initializes all the resources needed to start
+// the program.
 //
 // PARAMETERS
 // argc: the number of parameters given to the program
