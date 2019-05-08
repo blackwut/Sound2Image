@@ -16,13 +16,13 @@
 //------------------------------------------------------------------------------
 typedef struct {
 	size_t id;					// the internal id of the periodic task
-	size_t user_id;				// the id provided by the user
+	size_t task_id;				// the id chosen by the user
 	size_t period;				// period expressed in milliseconds
 	size_t deadline;			// relative deadline expressed in milliseconds
 	size_t priority;			// priority in the range 0 (low) to 99 (high)
 	struct timespec woet;		// worst observed execution time expressed in ms
 	size_t deadline_misses;		// number of deadline misses
-	struct timespec at;			// next absolute activivation time
+	struct timespec at;			// next absolute activation time
 	struct timespec dl;			// absolute deadline
 } task_par;
 
@@ -39,20 +39,20 @@ static size_t task_count = 0;		// number of created tasks
 //
 // This function creates a periodic task. The periodic task is implemented with
 // a POSIX pthread and scheduled in a Round-Robin fashion.
-// All releated information of the periodic task are stored into a proper
+// All related information of the periodic task are stored into a proper
 // structure in order to keep track of it and manage it during the execution.
 //
 //------------------------------------------------------------------------------
 int ptask_create(void * (*task_handler)(void *),
-				 const size_t user_id,
+				 const size_t task_id,
 				 const size_t period,
 				 const size_t deadline,
 				 const size_t priority)
 {
-	int ret;
-	size_t id;
-	pthread_attr_t attributes;
-	struct sched_param sched;
+	int ret;						// return value of pthread_create
+	size_t id;						// current internal id of the task
+	pthread_attr_t attributes;		// scheduler attributes
+	struct sched_param sched;		// scheduler parameters
 
 	assert(task_count < MAX_TASKS);
 
@@ -60,7 +60,7 @@ int ptask_create(void * (*task_handler)(void *),
 	task_count++;
 
 	tp[id].id = id;
-	tp[id].user_id = user_id;
+	tp[id].task_id = task_id;
 	tp[id].period = period;
 	tp[id].deadline = deadline;
 	tp[id].priority = priority;
@@ -85,7 +85,7 @@ int ptask_create(void * (*task_handler)(void *),
 //------------------------------------------------------------------------------
 //
 // This function extracts the id of the periodic task from the pointer arg that
-// contains all releated information of that task.
+// contains all related information of that task.
 //
 //------------------------------------------------------------------------------
 size_t ptask_id(const void * arg)
@@ -98,13 +98,13 @@ size_t ptask_id(const void * arg)
 //------------------------------------------------------------------------------
 //
 // This function extracts the id of the periodic task, provided by the user,
-// from the pointer arg that contains all releated information of the that task.
+// from the pointer arg that contains all related information of the that task.
 //
 //------------------------------------------------------------------------------
-size_t ptask_user_id(const void * arg)
+size_t ptask_task_id(const void * arg)
 {
 	task_par * tp = (task_par *)arg;
-	return tp->user_id;
+	return tp->task_id;
 }
 
 
@@ -119,7 +119,7 @@ size_t ptask_user_id(const void * arg)
 //------------------------------------------------------------------------------
 void ptask_activate(const size_t id)
 {
-	struct timespec now;
+	struct timespec now;		// current time
 	time_now(&now);
 	time_copy(&(tp[id].at), now);
 	time_copy(&(tp[id].dl), now);
@@ -138,8 +138,8 @@ void ptask_activate(const size_t id)
 //------------------------------------------------------------------------------
 int ptask_deadline_miss(const size_t id)
 {
-	struct timespec now;
-	struct timespec diff;
+	struct timespec now;		// current time
+	struct timespec diff;		// the difference (at - now)
 
 	time_now(&now);
 	time_diff(&diff, tp[id].at, now);
@@ -187,13 +187,13 @@ size_t ptask_get_woet_ms(const size_t id)
 //------------------------------------------------------------------------------
 //
 // This function provide a simple way to join all the periodic tasks created.
-// It checks if the tasks make the join with success. If not the program exits
-// with EXIT_PTHREAD_JOIN value.
+// It checks if the tasks make the join with success. If not it returns 
+// PTASK_ERROR_JOIN value. Otherwise it returns PTASK_SUCCESS.
 //
 //------------------------------------------------------------------------------
 int ptask_wait_tasks()
 {
-	int ret;
+	int ret;		// pthread_join return value
 
 	for (int i = 0; i < task_count; ++i) {
 		ret = pthread_join(tid[i], NULL);

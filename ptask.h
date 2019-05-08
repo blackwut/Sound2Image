@@ -24,12 +24,13 @@
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function creates a new periodic task specifing the task_handler, period,
-// deadline and priority. The task is scheduled with a Round-Robin scheduler.
+// This function creates a new periodic task specifying the task_handler,
+// period, deadline and priority. The task is scheduled with a Round-Robin
+// scheduler.
 //
 // PARAMETERS
 // task_handler: routine of the task
-// user_id: the id associated by the user to the created task
+// task_id: the id of the created task chosen by the user
 // period: period of the task
 // deadline: deadline of the task. It must be less than or equal to period
 // priority: priority of the task. The value must be in the range [0, 99]
@@ -41,7 +42,7 @@
 //
 //------------------------------------------------------------------------------
 int ptask_create(void * (*task_handler)(void *),
-				 const size_t user_id,
+				 const size_t task_id,
 				 const size_t period,
 				 const size_t deadline,
 				 const size_t priority);
@@ -65,16 +66,16 @@ size_t ptask_id(const void *arg);
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function returns the id of the periodic task provided by the user.
+// This function returns the id of the periodic task chosen by the user.
 //
 // PARAMETERS
-// arg: the arguments provided to the task_handler routine
+// arg: the argument provided to the task_handler routine
 //
 // RETURN
-// The id of the periodic task provided by the user
+// The id of the periodic task chosen by the user
 //
 //------------------------------------------------------------------------------
-size_t ptask_user_id(const void *arg);
+size_t ptask_task_id(const void *arg);
 
 //------------------------------------------------------------------------------
 //
@@ -84,7 +85,7 @@ size_t ptask_user_id(const void *arg);
 // the task.
 //
 // PARAMETES
-// id: the periodic task id
+// id: the internal periodic task id
 //
 //------------------------------------------------------------------------------
 void ptask_activate(const size_t id);
@@ -97,11 +98,11 @@ void ptask_activate(const size_t id);
 // woet (worst observed execution time).
 //
 // PARAMETES
-// id: the periodic task id
+// id: the internal periodic task id
 //
 // RETURN
 // In case of deadline miss it returns PTASK_DEADLINE_MISS.
-// Otherwhise it returns PTASK_SUCCESS.
+// Otherwise it returns PTASK_SUCCESS.
 //
 //------------------------------------------------------------------------------
 int ptask_deadline_miss(const size_t id);
@@ -113,7 +114,7 @@ int ptask_deadline_miss(const size_t id);
 // This function suspends the periodic task until the next activation.
 //
 // PARAMETERS
-// id: the periodic task id
+// id: the internal periodic task id
 //
 //------------------------------------------------------------------------------
 void ptask_wait_for_activation(const size_t id);
@@ -126,7 +127,7 @@ void ptask_wait_for_activation(const size_t id);
 // periodic task expressed in milliseconds.
 //
 // PARAMETERS
-// id: the periodic task id
+// id: the internal periodic task id
 //
 // RETURN
 // The woet expressed in milliseconds
@@ -138,8 +139,8 @@ size_t ptask_get_woet_ms(const size_t id);
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function is a help function that provide a simple way to waits the
-// completation of all periodic tasks created in the program lifetime.
+// This function is a help function that provides a simple way to wait the
+// completion of all periodic tasks created.
 //
 // RETURN
 // If an error occurred, it returns PTASK_ERROR_JOIN.
