@@ -83,64 +83,64 @@
 //------------------------------------------------------------------------------
 // number of buffers of the stream
 #define STREAM_FRAME_COUNT		8
-// Must be a divider of audio.samplerate and TASK_FFT_PERIOD
+// number of samples: must be a divider of audio.samplerate and TASK_FFT_PERIOD
 #define STREAM_SAMPLES			882
-// Data type of the stream audio values
+// data type of the stream audio values
 #define STREAM_DATA_TYPE		ALLEGRO_AUDIO_DEPTH_FLOAT32
 
 
 //------------------------------------------------------------------------------
 // BUBBLE DISPLAY SETTINGS
 //------------------------------------------------------------------------------
-#define BUBBLE_THICKNESS			2		// thickness of bubble circle
-#define BUBBLE_RADIUS 				8		// radius of a bubble
-#define BUBBLE_ALPHA_FILLED			200		// alpha chann. of filled circle
-#define BUBBLE_ALPHA_STROKE			255		// alpha chann. of circle
+#define BUBBLE_THICKNESS		2		// thickness of bubble circle
+#define BUBBLE_RADIUS 			8		// radius of a bubble
+#define BUBBLE_ALPHA_FILLED		200		// alpha channel of filled circle
+#define BUBBLE_ALPHA_STROKE		255		// alpha channel of circle
 
 
 //------------------------------------------------------------------------------
 // USER INPUT MIN, BASE, MAX, STEP VALUES
 //------------------------------------------------------------------------------
-#define BUBBLE_TASKS_MIN 			8		// minimum amount of bubbles
-#define BUBBLE_TASKS_BASE 			24		// starting amount of bubbles
-#define BUBBLE_TASKS_MAX 			32		// maximum amount of bubbles
-#define BUBBLE_LPASS_PARAM			0.5		// low pass filter parameter
+#define BUBBLE_TASKS_MIN 		8		// minimum amount of bubbles
+#define BUBBLE_TASKS_BASE 		24		// starting amount of bubbles
+#define BUBBLE_TASKS_MAX 		32		// maximum amount of bubbles
+#define BUBBLE_LPASS_PARAM		0.5		// low pass filter parameter
 
-#define BUBBLE_SCALE_MIN			0.5f	// minimum scale factor of bubbles
-#define BUBBLE_SCALE_BASE			1.0f	// starting scale factor of bubbles
-#define BUBBLE_SCALE_MAX			2.0f	// maximum scale factor of bubbles
-#define BUBBLE_SCALE_STEP			0.1f	// incr/decr step of scale factor
+#define BUBBLE_SCALE_MIN		0.5f	// minimum scale factor of bubbles
+#define BUBBLE_SCALE_BASE		1.0f	// starting scale factor of bubbles
+#define BUBBLE_SCALE_MAX		2.0f	// maximum scale factor of bubbles
+#define BUBBLE_SCALE_STEP		0.1f	// incr/decr step of scale factor
 
-#define GAIN_MIN					0		// minimum value of gain volume
-#define GAIN_BASE					50		// starting value of gain volume
-#define GAIN_MAX					100		// maximum value of gain volume
-#define GAIN_STEP					1		// incr/decr step of scale volume
+#define GAIN_MIN				0		// minimum value of gain volume
+#define GAIN_BASE				50		// starting value of gain volume
+#define GAIN_MAX				100		// maximum value of gain volume
+#define GAIN_STEP				1		// incr/decr step of scale volume
 
 
 //------------------------------------------------------------------------------
 // EXIT CONSTANTS
 //------------------------------------------------------------------------------
-#define EXIT_NO_FILENAME			128		// filename missing errorcode
-#define EXIT_FFT_AUDIO_ERROR		128		// fft_audio generic errorcode
-#define EXIT_FFT_AUDIO_OPEN_FILE	130		// fft_audio open file errorcode
-#define EXIT_FFT_AUDIO_SAMPLERATE	131		// unsupported samplerate errorcode
-#define EXIT_FFT_AUDIO_CHANNELS		132		// unsupported channels errorcode
-#define EXIT_BTRAILS_ERROR			133		// brails generic errorcode
-#define EXIT_PTASK_ERROR			134		// ptask generic errorcode
-#define EXIT_PTASK_CREATE			135		// ptask create task errorcode
-#define EXIT_PTASK_JOIN				136		// ptask join task errorcode
-#define EXIT_ALLEGRO_ERROR			137		// allegro generic errorcode
+#define EXIT_NO_FILENAME			128		// filename missing error code
+#define EXIT_FFT_AUDIO_ERROR		128		// fft_audio generic error code
+#define EXIT_FFT_AUDIO_OPEN_FILE	130		// fft_audio open file error code
+#define EXIT_FFT_AUDIO_SAMPLERATE	131		// unsupported samplerate error code
+#define EXIT_FFT_AUDIO_CHANNELS		132		// unsupported channels error code
+#define EXIT_BTRAILS_ERROR			133		// brails generic error code
+#define EXIT_PTASK_ERROR			134		// ptask generic error code
+#define EXIT_PTASK_CREATE			135		// ptask create task error code
+#define EXIT_PTASK_JOIN				136		// ptask join task error code
+#define EXIT_ALLEGRO_ERROR			137		// allegro generic error code
 
 
 //------------------------------------------------------------------------------
 // COLORS
 //------------------------------------------------------------------------------
-// Display background color
+// display background color
 const unsigned char BACK_COLOR[3] = {32, 32, 32};
 
-// Bubble colors
+// bubble colors
 #define MAX_COLORS 32							// number of encoded COLORS
-const unsigned char COLORS[MAX_COLORS][3] = {	// encoded colors in RGB array
+const unsigned char COLORS[MAX_COLORS][3] = {	// global RGB colors
 	//Gray
 	{ 93, 109, 126}, { 86, 101, 115}, { 52,  73,  94}, { 46,  64,  83},
 	// Blue
@@ -158,7 +158,6 @@ const unsigned char COLORS[MAX_COLORS][3] = {	// encoded colors in RGB array
 	// Purple
 	{136,  78, 160}, {155,  89, 182}, {125,  60, 152}, {142,  68, 173},
 };
-
 
 
 #endif
