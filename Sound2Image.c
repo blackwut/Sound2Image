@@ -853,7 +853,7 @@ void * task_fft(void * arg)
 			MUTEX_EXP(elapsed_time += STREAM_SAMPLES * 1000/ samplerate,
 					 mux_elapsed_time);
 
-			// Load the curent windowing method and compute the FFT
+			// Load the current windowing method and compute the FFT
 			MUTEX_EXP(windowing_local = windowing, mux_windowing);
 			fft_audio_compute_fft(windowing_local);
 
