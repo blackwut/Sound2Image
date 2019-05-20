@@ -34,8 +34,8 @@ typedef struct {
 	SNDFILE * file;								// Pointer to the audio file
 	float data[MAX_DATA_ELEMS];					// Float audio values
 	float windowing_data[MAX_DATA_ELEMS];		// Float windowing values
-	fftwf_complex fft_in[MAX_FRAME_ELEMS];	// Complex audio values
-	fftwf_complex fft_out[MAX_FRAME_ELEMS];	// Complex FFT values
+	fftwf_complex fft_in[MAX_FRAME_ELEMS];		// Complex audio values
+	fftwf_complex fft_out[MAX_FRAME_ELEMS];		// Complex FFT values
 
 	size_t samplerate;							// Samplerate of the audio file
 	size_t channels;							// Num. of channels of the audio
