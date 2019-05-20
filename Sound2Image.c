@@ -91,22 +91,23 @@ ALLEGRO_COLOR font_color;			// the color of drawn text
 ALLEGRO_FONT * font_big;			// font used to draw text with big size
 ALLEGRO_FONT * font_small;			// font used to draw text with small size
 
-size_t samplerate;					// samplerate of audio file.
+// Shared data structures
+size_t samplerate;					// samplerate of the audio file
 int done;							// if TRUE the program stops
 size_t active_tasks;				// num. of tasks active
-size_t gain;						// volume of audio listening
+size_t gain;						// volume gain of the audio
 fft_audio_windowing windowing;		// windowing method of FFT
-size_t elapsed_time;				// elapsed time of audio listening
+size_t elapsed_time;				// elapsed time of the audio expressed in ms
 float bubble_scale;					// scale factor of displayed bubbles
 ALLEGRO_AUDIO_STREAM * stream;		// audio stream object
 
-// Mutexes
-pthread_mutex_t mux_done;			// mutex associated to variable done
-pthread_mutex_t mux_active_tasks;	// mutex associated to variable active_tasks
-pthread_mutex_t mux_gain;			// mutex associated to variable gain
-pthread_mutex_t mux_windowing;		// mutex associated to variable windowing
-pthread_mutex_t mux_elapsed_time;	// mutex associated to variable elapsed_time
-pthread_mutex_t mux_bubble_scale;	// mutex associated to variable bubble_scale
+// Mutexes of Shared data structures
+pthread_mutex_t mux_done;			// mutex associated to var. done
+pthread_mutex_t mux_active_tasks;	// mutex associated to var. active_tasks
+pthread_mutex_t mux_gain;			// mutex associated to var. gain
+pthread_mutex_t mux_windowing;		// mutex associated to var. windowing
+pthread_mutex_t mux_elapsed_time;	// mutex associated to var. elapsed_time
+pthread_mutex_t mux_bubble_scale;	// mutex associated to var. bubble_scale
 
 //------------------------------------------------------------------------------
 // Mutex, Condition variables and counter to implement precedence relationship
@@ -115,7 +116,7 @@ pthread_mutex_t mux_bubble_scale;	// mutex associated to variable bubble_scale
 pthread_cond_t cond_fft_producer;	// cond. var. associated to task_fft
 pthread_cond_t cond_fft_consumers;	// cond. var. associated to all task_bubble
 pthread_mutex_t mux_fft;			// mutex associated to the prev. cond. var.
-size_t fft_counter;					// variable to make synchronization
+size_t counter_fft;					// variable to make synchronization
 
 
 //------------------------------------------------------------------------------
@@ -399,7 +400,7 @@ void sound2image_init_variables(char * filename)
 
 	// Variables
 	done = FALSE;
-	fft_counter = 0;
+	counter_fft = 0;
 	active_tasks = BUBBLE_TASKS_BASE;
 	bubble_scale = BUBBLE_SCALE_BASE;
 	elapsed_time = 0;
@@ -842,7 +843,7 @@ void * task_fft(void * arg)
 
 		// Wait the computation of all task_bubble
 		MUTEX_LOCK(mux_fft);
-		while (fft_counter > 0) {
+		while (counter_fft > 0) {
 			pthread_cond_wait(&cond_fft_producer, &mux_fft);
 		}
 
@@ -865,7 +866,7 @@ void * task_fft(void * arg)
 		}
 
 		// Awake all task_bubble to make them computing the new frame
-		fft_counter = BUBBLE_TASKS_MAX;
+		counter_fft = BUBBLE_TASKS_MAX;
 		pthread_cond_broadcast(&cond_fft_consumers);
 		MUTEX_UNLOCK(mux_fft);
 
@@ -917,7 +918,7 @@ void * task_bubble(void * arg)
 
 		// Wait the computation of task_fft
 		MUTEX_LOCK(mux_fft);
-		while (fft_counter == 0) {
+		while (counter_fft == 0) {
 			pthread_cond_wait(&cond_fft_consumers, &mux_fft);
 		}
 
@@ -944,8 +945,8 @@ void * task_bubble(void * arg)
 		}
 
 		// Awake the task_fft if all task_bubble completed the computation
-		fft_counter--;
-		if (fft_counter == 0) {
+		counter_fft--;
+		if (counter_fft == 0) {
 			pthread_cond_signal(&cond_fft_producer);
 		}
 		MUTEX_UNLOCK(mux_fft);
