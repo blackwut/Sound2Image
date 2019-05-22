@@ -19,14 +19,25 @@
 //------------------------------------------------------------------------------
 // SOUND2IMAGE GLOBAL MACROS
 //------------------------------------------------------------------------------
-#define MUTEX_LOCK(lock)	pthread_mutex_lock(&lock)	// Shorthand for lock
-#define MUTEX_UNLOCK(lock)	pthread_mutex_unlock(&lock)	// Shorthand for unlock
+// Shorthand for lock
+#define MUTEX_LOCK(lock) \
+do { \
+	pthread_mutex_lock(&lock); \
+} while (0)
+
+// Shorthand for unlock
+#define MUTEX_UNLOCK(lock) \
+do { \
+	pthread_mutex_unlock(&lock); \
+} while (0)
 
 // Shorthand for protect a small critical section
-#define MUTEX_EXP(expr, lock) \
+#define MUTEX_EXP(lock, expr) \
+do { \
 	MUTEX_LOCK(lock); \
 	expr; \
-	MUTEX_UNLOCK(lock)
+	MUTEX_UNLOCK(lock); \
+} while (0)
 
 
 //------------------------------------------------------------------------------
@@ -701,8 +712,8 @@ void draw_trails()
 	float spacing;					// spacing between two bubbles
 	float scale;					// scale factor by which the bubble is drawn
 
-	MUTEX_EXP(active_tasks_local = active_tasks, mux_active_tasks);
-	MUTEX_EXP(scale = bubble_scale, mux_bubble_scale);
+	MUTEX_EXP(mux_active_tasks, active_tasks_local = active_tasks);
+	MUTEX_EXP(mux_bubble_scale, scale = bubble_scale);
 
 	spacing = bubble_spacing_with(active_tasks_local);
 
@@ -722,7 +733,7 @@ void draw_bubbles_info()
 {
 	size_t active_tasks_local;		// local value of active tasks
 
-	MUTEX_EXP(active_tasks_local = active_tasks, mux_active_tasks);
+	MUTEX_EXP(mux_active_tasks, active_tasks_local = active_tasks);
 
 	allegro_blender_mode_standard();
 	al_draw_textf(font_big, font_color,
@@ -742,7 +753,7 @@ void draw_windowing_info()
 {
 	int windowing_local;		// local value of windowing method
 
-	MUTEX_EXP(windowing_local = windowing, mux_windowing);
+	MUTEX_EXP(mux_windowing, windowing_local = windowing);
 	fft_audio_get_windowing_name(windowing_local);
 
 	allegro_blender_mode_standard();
@@ -766,7 +777,7 @@ void draw_time_info()
 	size_t seconds;
 	size_t milliseconds;
 
-	MUTEX_EXP(milliseconds = elapsed_time, mux_elapsed_time);
+	MUTEX_EXP(mux_elapsed_time, milliseconds = elapsed_time);
 
 	minutes = TIME_MSEC_TO_SEC(milliseconds) / 60;
 	seconds = TIME_MSEC_TO_SEC(milliseconds) % 60;
@@ -790,7 +801,7 @@ void draw_gain_info()
 {
 	size_t gain_local;		// local value of gain
 
-	MUTEX_EXP(gain_local = gain, mux_gain);
+	MUTEX_EXP(mux_gain, gain_local = gain);
 
 	al_draw_textf(font_big, font_color,
 				  GAIN_INFO_X, GAIN_INFO_Y,
@@ -851,17 +862,17 @@ void * task_fft(void * arg)
 		ret = allegro_stream_fill_frame();
 		if (ret == TRUE) {
 			// Update the elapsed audio time
-			MUTEX_EXP(elapsed_time += STREAM_SAMPLES * 1000/ samplerate,
-					 mux_elapsed_time);
+			MUTEX_EXP(mux_elapsed_time,
+					  elapsed_time += STREAM_SAMPLES * 1000/ samplerate);
 
 			// Load the current windowing method and compute the FFT
-			MUTEX_EXP(windowing_local = windowing, mux_windowing);
+			MUTEX_EXP(mux_windowing, windowing_local = windowing);
 			fft_audio_compute_fft(windowing_local);
 
 			// Load a new frame for the next period
 			ret = fft_audio_load_next_frame();
 			if (ret == FFT_AUDIO_EOF) {
-				MUTEX_EXP(done = TRUE, mux_done);
+				MUTEX_EXP(mux_done, done = TRUE);
 			}
 		}
 
@@ -871,7 +882,7 @@ void * task_fft(void * arg)
 		MUTEX_UNLOCK(mux_fft);
 
 		// Update the current status of done variable
-		MUTEX_EXP(done_local = done, mux_done);
+		MUTEX_EXP(mux_done, done_local = done);
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
@@ -913,7 +924,7 @@ void * task_bubble(void * arg)
 	while (!done_local) {
 
 		// Update the local value of active_tasks and calculate the spacing
-		MUTEX_EXP(active_tasks_local = active_tasks, mux_active_tasks);
+		MUTEX_EXP(mux_active_tasks, active_tasks_local = active_tasks);
 		bubble_spacing = bubble_spacing_with(active_tasks_local);
 
 		// Wait the computation of task_fft
@@ -962,7 +973,7 @@ void * task_bubble(void * arg)
 		btrails_unlock(user_id);
 
 		// Update the current status of done variable
-		MUTEX_EXP(done_local = done, mux_done);
+		MUTEX_EXP(mux_done, done_local = done);
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
@@ -1012,7 +1023,7 @@ void * task_display(void * arg)
 		al_flip_display();
 
 		// Update the current status of done variable
-		MUTEX_EXP(done_local = done, mux_done);
+		MUTEX_EXP(mux_done, done_local = done);
 
 		// Check of a deadline miss and wait for the next period
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
@@ -1052,7 +1063,7 @@ void * task_input(void * arg)
 		al_wait_for_event_timed(input_queue, &event, TASK_INPUT_EVENT_TIME);
 
 		if (keys[ALLEGRO_KEY_ESCAPE]) {
-			MUTEX_EXP(done = TRUE, mux_done);
+			MUTEX_EXP(mux_done, done = TRUE);
 		}
 
 		if (keys[ALLEGRO_KEY_UP]) {
@@ -1108,7 +1119,7 @@ void * task_input(void * arg)
 		// Reading numbers from 1 to 7
 		for (i = ALLEGRO_KEY_1; i < ALLEGRO_KEY_8; ++i) {
 			if (keys[i]) {
-				MUTEX_EXP(windowing = (i - ALLEGRO_KEY_0 - 1), mux_windowing);
+				MUTEX_EXP(mux_windowing, windowing = (i - ALLEGRO_KEY_0 - 1));
 			}
 		}
 
@@ -1120,7 +1131,7 @@ void * task_input(void * arg)
 			keys[event.keyboard.keycode] = FALSE;
 		}
 
-		MUTEX_EXP(done_local = done, mux_done);
+		MUTEX_EXP(mux_done, done_local = done);
 
 		if (ptask_deadline_miss(id) == PTASK_DEADLINE_MISS) {
 			fprintf(stderr, "%zu) deadline missed! woet: %zu ms\n",
