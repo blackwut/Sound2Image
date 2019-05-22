@@ -560,7 +560,7 @@ float bubble_spacing_with(size_t n)
 // This function calculates the range [from, to] of samples for a given bubble.
 // Values "from" and "to" are calculated as follows:
 // N    = number of samples
-// step = log_2( (N / 2 - n) / (n + 1) )
+// step = log_2(N / 2 - n) / (n + 1)
 // from = round( 2^( step * (id + 1) ) ) + (id + 1)
 // to   = round( 2^( step * (id + 2) ) ) + (id + 2)
 //
