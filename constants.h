@@ -39,13 +39,13 @@
 #define TASK_BUBBLE_DEADLINE		20				// task_bubble deadline
 #define TASK_BUBBLE_PRIORITY		60				// task_bubble priority
 
-#define TASK_INPUT_PERIOD			30				// task_input period
-#define TASK_INPUT_DEADLINE			30				// task_input deadline
+#define TASK_INPUT_PERIOD			33				// task_input period
+#define TASK_INPUT_DEADLINE			33				// task_input deadline
 #define TASK_INPUT_PRIORITY			30				// task_input priority
 #define TASK_INPUT_EVENT_TIME		(20 / 1000.f)	// task_input event time
 
-#define TASK_DISPLAY_PERIOD			30				// task_display period
-#define TASK_DISPLAY_DEADLINE		30				// task_display deadline
+#define TASK_DISPLAY_PERIOD			33				// task_display period
+#define TASK_DISPLAY_DEADLINE		33				// task_display deadline
 #define TASK_DISPLAY_PRIORITY		30				// task_display priority
 
 
@@ -83,7 +83,8 @@
 //------------------------------------------------------------------------------
 // number of buffers of the stream
 #define STREAM_FRAME_COUNT		8
-// number of samples: must be a divider of audio.samplerate and TASK_FFT_PERIOD
+// number of samples provided to the stream. It must be the number of samples
+// calculated in the task_fft period and it must be a divider of the samplerate
 #define STREAM_SAMPLES			882
 // data type of the stream audio values
 #define STREAM_DATA_TYPE		ALLEGRO_AUDIO_DEPTH_FLOAT32
