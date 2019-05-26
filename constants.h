@@ -54,7 +54,7 @@
 #define TASK_INPUT_PERIOD			33				// task_input period
 #define TASK_INPUT_DEADLINE			33				// task_input deadline
 #define TASK_INPUT_PRIORITY			30				// task_input priority
-#define TASK_INPUT_EVENT_TIME		(25 / 1000.0)	// task_input event time
+#define TASK_INPUT_EVENT_TIME		(20 / 1000.0)	// task_input event time
 
 #define TASK_DISPLAY_PERIOD			33				// task_display period
 #define TASK_DISPLAY_DEADLINE		33				// task_display deadline
