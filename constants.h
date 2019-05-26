@@ -9,6 +9,18 @@
 
 
 //------------------------------------------------------------------------------
+// KEY BINDINGS
+//------------------------------------------------------------------------------
+#ifdef __APPLE__
+	#define S2I_KEY_PLUS		ALLEGRO_KEY_CLOSEBRACE
+	#define S2I_KEY_MINUS 		ALLEGRO_KEY_SLASH
+#else
+	#define S2I_KEY_PLUS		65
+	#define S2I_KEY_MINUS 		61
+#endif
+
+
+//------------------------------------------------------------------------------
 // FONT
 //------------------------------------------------------------------------------
 #define FONT_NAME			"font/modum.ttf"	// path of the font
@@ -42,7 +54,7 @@
 #define TASK_INPUT_PERIOD			33				// task_input period
 #define TASK_INPUT_DEADLINE			33				// task_input deadline
 #define TASK_INPUT_PRIORITY			30				// task_input priority
-#define TASK_INPUT_EVENT_TIME		(20 / 1000.f)	// task_input event time
+#define TASK_INPUT_EVENT_TIME		(25 / 1000.0)	// task_input event time
 
 #define TASK_DISPLAY_PERIOD			33				// task_display period
 #define TASK_DISPLAY_DEADLINE		33				// task_display deadline
@@ -83,9 +95,6 @@
 //------------------------------------------------------------------------------
 // number of buffers of the stream
 #define STREAM_FRAME_COUNT		8
-// number of samples provided to the stream. It must be the number of samples
-// calculated in the task_fft period and it must be a divider of the samplerate
-#define STREAM_SAMPLES			882
 // data type of the stream audio values
 #define STREAM_DATA_TYPE		ALLEGRO_AUDIO_DEPTH_FLOAT32
 
@@ -110,7 +119,7 @@
 #define BUBBLE_SCALE_MIN		0.5f	// minimum scale factor of bubbles
 #define BUBBLE_SCALE_BASE		1.0f	// starting scale factor of bubbles
 #define BUBBLE_SCALE_MAX		2.0f	// maximum scale factor of bubbles
-#define BUBBLE_SCALE_STEP		0.1f	// incr/decr step of scale factor
+#define BUBBLE_SCALE_STEP		0.05f	// incr/decr step of scale factor
 
 #define GAIN_MIN				0		// minimum value of gain volume
 #define GAIN_BASE				50		// starting value of gain volume
