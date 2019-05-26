@@ -27,7 +27,7 @@
 // FFT_AUDIO GLOBAL ENUMS DECLARATION
 //------------------------------------------------------------------------------
 typedef enum {
-	fft_audio_rectangular = 0,
+	fft_audio_rectangular = 1,
 	fft_audio_welch,
 	fft_audio_triangular,
 	fft_audio_barlett,
@@ -60,20 +60,19 @@ typedef struct {
 //
 // PARAMETERS
 // filename: the path of the audio file
-// frame_elements: the number of elements to be computed on each frame
-// windowing: the type of windowing to be applied
+// duration: frame duration size in milliseconds
 //
 // RETURN
 // It returns:
 // - FFT_AUDIO_ERROR_FILE if the file does not exists or is not accessible.
-// - FFT_AUDIO_ERROR_SAMPLERATE if audio samplerate is greater than 44100
+// - FFT_AUDIO_ERROR_SAMPLERATE if audio samplerate is greater than the maximum
+//   samplerate manageable
 // - FFT_AUDIO_ERROR_CHANNELS if audio channels are more than 2
 // - FFT_AUDIO_SUCCESS otherwise
 //
 //------------------------------------------------------------------------------
 int fft_audio_init(const char filename[],
-				   const size_t frame_elements,
-				   const fft_audio_windowing windowing);
+				   const size_t duration);
 
 //------------------------------------------------------------------------------
 //
@@ -97,6 +96,18 @@ size_t fft_audio_get_samplerate();
 //
 //------------------------------------------------------------------------------
 size_t fft_audio_get_channels();
+
+
+//------------------------------------------------------------------------------
+//
+// DESCRIPTION
+// This function returns the number of samples in a frame.
+//
+// RETURN
+// The number of samples in a frame.
+//
+//------------------------------------------------------------------------------
+size_t fft_audio_get_frames_elements();
 
 
 //------------------------------------------------------------------------------

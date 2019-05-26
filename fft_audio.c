@@ -10,7 +10,7 @@
 //------------------------------------------------------------------------------
 // FFT_AUDIO LOCAL CONSTANTS
 //------------------------------------------------------------------------------
-#define MAX_SAMPLERATE			44100
+#define MAX_SAMPLERATE			48000
 #define MAX_CHANNELS			2
 #define MAX_FRAME_ELEMS			MAX_SAMPLERATE
 #define MAX_DATA_ELEMS			(MAX_CHANNELS * MAX_SAMPLERATE)
@@ -50,6 +50,7 @@ typedef struct {
 // FFT_AUDIO LOCAL DATA
 //------------------------------------------------------------------------------
 static char * windowing_names[] = {
+	"UNSELECTED",
 	"Rectangular",
 	"Welch",
 	"Triangular",
@@ -213,7 +214,6 @@ static void fft_audio_fill_windowing_data_blackman()
 //------------------------------------------------------------------------------
 static void fft_audio_fill_windowing_data(const fft_audio_windowing windowing)
 {
-
 	switch (windowing) {
 		case fft_audio_rectangular:
 			fft_audio_fill_windowing_data_rectangular();
@@ -261,12 +261,12 @@ static void fft_audio_apply_window()
 
 //------------------------------------------------------------------------------
 //
-// This function is a help function that allows to load the audio data not yet
-// read. It also performs the numeric normalization of the audio signal needed
-// for the FFT execution.
+// This function is a help function that allows to read the audio data of the
+// next frame. It also performs the numeric normalization of the audio signal
+// needed for the FFT execution.
 //
 //------------------------------------------------------------------------------
-static int fft_audio_read_data()
+static int fft_audio_read_next_frame_data()
 {
 	size_t read_count;
 	size_t i;
@@ -305,16 +305,12 @@ static int fft_audio_read_data()
 //
 //------------------------------------------------------------------------------
 int fft_audio_init(const char filename[],
-				   const size_t frames_elements,
-				   const fft_audio_windowing windowing)
+				   const size_t duration)
 {
 	size_t i;
 	SF_INFO info;
 
 	assert(filename != NULL);
-	assert(frames_elements <= MAX_FRAME_ELEMS);
-	assert(fft_audio_rectangular <= windowing);
-	assert(windowing <= fft_audio_blackman);
 
 	memset(&info, 0, sizeof(info));
 	audio.file = sf_open(filename, SFM_READ, &info);
@@ -333,8 +329,10 @@ int fft_audio_init(const char filename[],
 
 	audio.samplerate = info.samplerate;
 	audio.channels = info.channels;
-	audio.frames_elements = frames_elements;
-	audio.windowing = windowing;
+	audio.windowing = -1;
+	audio.frames_elements = audio.samplerate / 1000.0 * duration;
+
+	assert(audio.frames_elements <= MAX_FRAME_ELEMS);
 
 	for (i = 0 ; i < MAX_DATA_ELEMS; ++i) {
 		audio.data[i] = SILENCE_VALUE;
@@ -347,11 +345,11 @@ int fft_audio_init(const char filename[],
 		audio.fft_out[i][1] = 0.0f;
 	}
 
-	audio.plan = fftwf_plan_dft_1d(frames_elements,
-								   audio.fft_in,
-								   audio.fft_out,
-								   FFTW_FORWARD,
-								   FFTW_ESTIMATE);
+	audio.plan = fftwf_plan_dft_1d(audio.frames_elements,
+							   audio.fft_in,
+							   audio.fft_out,
+							   FFTW_FORWARD,
+							   FFTW_ESTIMATE);
 
 	return FFT_AUDIO_SUCCESS;
 }
@@ -381,6 +379,17 @@ size_t fft_audio_get_channels()
 
 //------------------------------------------------------------------------------
 //
+// This function returns the number of samples in a frame.
+//
+//------------------------------------------------------------------------------
+size_t fft_audio_get_frames_elements()
+{
+	return audio.frames_elements;
+}
+
+
+//------------------------------------------------------------------------------
+//
 // This function returns the string name of the provided windowing.
 //
 //------------------------------------------------------------------------------
@@ -402,7 +411,7 @@ int fft_audio_load_next_frame()
 {
 	int ret;
 
-	ret = fft_audio_read_data();
+	ret = fft_audio_read_next_frame_data();
 	if (ret == FFT_AUDIO_EOF) {
 		return FFT_AUDIO_EOF;
 	}
