@@ -104,6 +104,7 @@ ALLEGRO_FONT * font_small;			// font used to draw text with small size
 
 // Shared data structures
 size_t samplerate;					// samplerate of the audio file
+size_t stream_samples;				// number of samples provided to the stream
 int done;							// if TRUE the program stops
 size_t active_tasks;				// num. of tasks active
 size_t gain;						// volume gain of the audio
@@ -299,7 +300,7 @@ ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
 //------------------------------------------------------------------------------
 void allegro_stream_set_gain(size_t val)
 {
-	allegro_check(al_set_audio_stream_gain(stream, val / 100.0f),
+	allegro_check(al_set_audio_stream_gain(stream, val / (float)GAIN_MAX),
 				  "al_set_audio_stream_gain()");
 }
 
@@ -430,19 +431,18 @@ void sound2image_init_variables(char * filename)
 	pthread_mutex_init(&mux_windowing, NULL);
 
 	// fft_audio
-	fft_audio_check(fft_audio_init(filename,
-								   STREAM_SAMPLES,
-								   fft_audio_hamming),
+	fft_audio_check(fft_audio_init(filename, TASK_FFT_PERIOD),
 					"File does not exits or it is not compatible");
 	samplerate = fft_audio_get_samplerate();
 	channels = fft_audio_get_channels();
+	stream_samples = fft_audio_get_frames_elements();
 
 	// Allegro
 	allegro_init();
 	al_set_target_bitmap(NULL);
 
 	stream = al_create_audio_stream(STREAM_FRAME_COUNT,
-									STREAM_SAMPLES,
+									stream_samples,
 									samplerate,
 									STREAM_DATA_TYPE,
 									allegro_channel_conf_with(channels));
@@ -560,7 +560,7 @@ float bubble_spacing_with(size_t n)
 // This function calculates the range [from, to] of samples for a given bubble.
 // Values "from" and "to" are calculated as follows:
 // N    = number of samples
-// step = log_2(N / 2 - n) / (n + 1)
+// step = log_2(N / 2 - (n + 1)) / (n + 1)
 // from = round( 2^( step * (id + 1) ) ) + (id + 1)
 // to   = round( 2^( step * (id + 2) ) ) + (id + 2)
 //
@@ -580,7 +580,7 @@ fft_audio_range bubble_samples_range(const size_t id,
 	fft_audio_range range;		// the range [from, to] to be calculated
 
 	if (id < n) {
-		step = log2f(STREAM_SAMPLES / 2 - n) / (n + 1);
+		step = log2f(stream_samples / 2 - (n + 1)) / (n + 1);
 		range.from = (size_t)lroundf(powf(2, (id + 1) * step)) + id + 1;
 		range.to = (size_t)lround(powf(2, (id + 2) * step)) + id + 2;
 	} else {
@@ -863,7 +863,7 @@ void * task_fft(void * arg)
 		if (ret == TRUE) {
 			// Update the elapsed audio time
 			MUTEX_EXP(mux_elapsed_time,
-					  elapsed_time += STREAM_SAMPLES * 1000/ samplerate);
+					  elapsed_time += stream_samples * 1000.0 / samplerate);
 
 			// Load the current windowing method and compute the FFT
 			MUTEX_EXP(mux_windowing, windowing_local = windowing);
@@ -968,7 +968,7 @@ void * task_bubble(void * arg)
 						  COLORS[color_id][0],
 						  COLORS[color_id][1],
 						  COLORS[color_id][2]);
-		btrails_set_freq(user_id, range.to * samplerate / STREAM_SAMPLES);
+		btrails_set_freq(user_id, range.to * samplerate / stream_samples);
 		btrails_put_bubble_pos(user_id, x, y);
 		btrails_unlock(user_id);
 
@@ -1098,7 +1098,7 @@ void * task_input(void * arg)
 			MUTEX_UNLOCK(mux_active_tasks);
 		}
 
-		if (keys[ALLEGRO_KEY_CLOSEBRACE]) {
+		if (keys[S2I_KEY_PLUS]) {
 			MUTEX_LOCK(mux_gain);
 			if (gain < GAIN_MAX) {
 				gain += GAIN_STEP;
@@ -1107,7 +1107,7 @@ void * task_input(void * arg)
 			MUTEX_UNLOCK(mux_gain);
 		}
 
-		if (keys[ALLEGRO_KEY_SLASH]) {
+		if (keys[S2I_KEY_MINUS]) {
 			MUTEX_LOCK(mux_gain);
 			if (gain > GAIN_MIN) {
 				gain -= GAIN_STEP;
@@ -1119,7 +1119,7 @@ void * task_input(void * arg)
 		// Reading numbers from 1 to 7
 		for (i = ALLEGRO_KEY_1; i < ALLEGRO_KEY_8; ++i) {
 			if (keys[i]) {
-				MUTEX_EXP(mux_windowing, windowing = (i - ALLEGRO_KEY_0 - 1));
+				MUTEX_EXP(mux_windowing, windowing = (i - ALLEGRO_KEY_0));
 			}
 		}
 
