@@ -56,7 +56,6 @@ void allegro_check(bool test,
 
 // Allegro help functions
 void allegro_init();
-ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels);
 void allegro_stream_set_gain(size_t val);
 int allegro_stream_fill_frame();
 void allegro_blender_mode_standard();
@@ -104,6 +103,7 @@ ALLEGRO_FONT * font_small;			// font used to draw text with small size
 
 // Shared data structures
 size_t samplerate;					// samplerate of the audio file
+size_t channels;					// number of channels of the audio file
 size_t stream_samples;				// number of samples provided to the stream
 int done;							// if TRUE the program stops
 size_t active_tasks;				// num. of tasks active
@@ -273,25 +273,6 @@ void allegro_init()
 //------------------------------------------------------------------------------
 //
 // DESCRIPTION
-// This function return the ALLEGRO_CHANNEL_CONF value corresponding to the
-// number of channels provided.
-//
-// PARAMETERS
-// channels: the number of channel
-//
-// RETURN
-// The ALLEGRO_CHANNEL_CONF enum corresponding to the number of channels
-//
-//------------------------------------------------------------------------------
-ALLEGRO_CHANNEL_CONF allegro_channel_conf_with(size_t channels)
-{
-	return (channels == 2 ? ALLEGRO_CHANNEL_CONF_2 : ALLEGRO_CHANNEL_CONF_1);
-}
-
-
-//------------------------------------------------------------------------------
-//
-// DESCRIPTION
 // This function set the given gain value to the stream audio.
 //
 // PARAMETERS
@@ -408,7 +389,7 @@ void allegro_free()
 //------------------------------------------------------------------------------
 void sound2image_init_variables(char * filename)
 {
-	size_t channels;		// number of channels of the audio file
+	ALLEGRO_CHANNEL_CONF ch_conf;	// Number of channels in Allegro 5
 
 	// Variables
 	done = FALSE;
@@ -441,11 +422,12 @@ void sound2image_init_variables(char * filename)
 	allegro_init();
 	al_set_target_bitmap(NULL);
 
+	ch_conf = (channels == 2 ? ALLEGRO_CHANNEL_CONF_2 : ALLEGRO_CHANNEL_CONF_1);
 	stream = al_create_audio_stream(STREAM_FRAME_COUNT,
 									stream_samples,
 									samplerate,
 									STREAM_DATA_TYPE,
-									allegro_channel_conf_with(channels));
+									ch_conf);
 	al_set_audio_stream_playmode(stream, ALLEGRO_PLAYMODE_ONCE);
 	allegro_stream_set_gain(gain);
 	allegro_check(al_attach_audio_stream_to_mixer(stream,
@@ -580,7 +562,7 @@ fft_audio_range bubble_samples_range(const size_t id,
 	fft_audio_range range;		// the range [from, to] to be calculated
 
 	if (id < n) {
-		step = log2f(stream_samples / 2 - (n + 1)) / (n + 1);
+		step = log2f(stream_samples / channels - (n + 1)) / (n + 1);
 		range.from = (size_t)lroundf(powf(2, (id + 1) * step)) + id + 1;
 		range.to = (size_t)lround(powf(2, (id + 2) * step)) + id + 2;
 	} else {
@@ -624,7 +606,7 @@ float bubble_calculate_val(const size_t id,
 
 	valMin = log2f(audio_stats.magMin);
 	valMax = log2f(audio_stats.magMax);
-	val = log2f(frame_stats.magMax);
+	val = log2f(frame_stats.magAvg);
 	val = (val - valMin) / (valMax - valMin);
 
 	if (isfinite(val)) {
@@ -940,7 +922,7 @@ void * task_bubble(void * arg)
 			// calculate the new value to compute the y position of the bubble
 			val = bubble_calculate_val(user_id, val, range);
 			// calculate the color_id
-			color_id = MAX_COLORS * (user_id / (float) active_tasks_local);
+			color_id = MAX_COLORS * (user_id / (float)active_tasks_local);
 			// calculate the x position of the bubble using the current spacing
 			x = (user_id + 1) * bubble_spacing;
 			// calculate the y position of the bubble using a low-pass filter
