@@ -10,7 +10,7 @@
 //------------------------------------------------------------------------------
 // FFT_AUDIO LOCAL CONSTANTS
 //------------------------------------------------------------------------------
-#define MAX_SAMPLERATE			48000
+#define MAX_SAMPLERATE			96000
 #define MAX_CHANNELS			2
 #define MAX_FRAME_ELEMS			MAX_SAMPLERATE
 #define MAX_DATA_ELEMS			(MAX_CHANNELS * MAX_SAMPLERATE)
