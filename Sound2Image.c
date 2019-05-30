@@ -104,7 +104,7 @@ ALLEGRO_FONT * font_small;			// font used to draw text with small size
 // Shared data structures
 size_t samplerate;					// samplerate of the audio file
 size_t channels;					// number of channels of the audio file
-size_t stream_samples;				// number of samples provided to the stream
+size_t frame_samples;				// number of samples provided to the stream
 int done;							// if TRUE the program stops
 size_t active_tasks;				// num. of tasks active
 size_t gain;						// volume gain of the audio
@@ -416,7 +416,7 @@ void sound2image_init_variables(char * filename)
 					"File does not exits or it is not compatible");
 	samplerate = fft_audio_get_samplerate();
 	channels = fft_audio_get_channels();
-	stream_samples = fft_audio_get_frames_elements();
+	frame_samples = fft_audio_get_frame_elements();
 
 	// Allegro
 	allegro_init();
@@ -424,7 +424,7 @@ void sound2image_init_variables(char * filename)
 
 	ch_conf = (channels == 2 ? ALLEGRO_CHANNEL_CONF_2 : ALLEGRO_CHANNEL_CONF_1);
 	stream = al_create_audio_stream(STREAM_FRAME_COUNT,
-									stream_samples,
+									frame_samples,
 									samplerate,
 									STREAM_DATA_TYPE,
 									ch_conf);
@@ -562,7 +562,7 @@ fft_audio_range bubble_samples_range(const size_t id,
 	fft_audio_range range;		// the range [from, to] to be calculated
 
 	if (id < n) {
-		step = log2f(stream_samples / channels - (n + 1)) / (n + 1);
+		step = log2f(frame_samples / channels - (n + 1)) / (n + 1);
 		range.from = (size_t)lroundf(powf(2, (id + 1) * step)) + id + 1;
 		range.to = (size_t)lround(powf(2, (id + 2) * step)) + id + 2;
 	} else {
@@ -845,7 +845,7 @@ void * task_fft(void * arg)
 		if (ret == TRUE) {
 			// Update the elapsed audio time
 			MUTEX_EXP(mux_elapsed_time,
-					  elapsed_time += stream_samples * 1000.0 / samplerate);
+					  elapsed_time += frame_samples * 1000.0 / samplerate);
 
 			// Load the current windowing method and compute the FFT
 			MUTEX_EXP(mux_windowing, windowing_local = windowing);
@@ -950,7 +950,7 @@ void * task_bubble(void * arg)
 						  COLORS[color_id][0],
 						  COLORS[color_id][1],
 						  COLORS[color_id][2]);
-		btrails_set_freq(user_id, range.to * samplerate / stream_samples);
+		btrails_set_freq(user_id, range.to * samplerate / frame_samples);
 		btrails_put_bubble_pos(user_id, x, y);
 		btrails_unlock(user_id);
 
@@ -1035,82 +1035,89 @@ void * task_input(void * arg)
 	int done_local = FALSE;				// local value of done
 	size_t i;							// index of ALLEGRO_KEY_# "for loop"
 	ALLEGRO_EVENT event;				// allegro event received
-	int keys[ALLEGRO_KEY_MAX];			// array of key state
-
-	memset(keys, 0, sizeof(keys));
+	int is_event;						// TRUE if evt occurred, FALSE otherwise
+	int keys[ALLEGRO_KEY_MAX] = {0};	// array of key state
 
 	ptask_activate(id);
 
 	while (!done_local) {
-		al_wait_for_event_timed(input_queue, &event, TASK_INPUT_EVENT_TIME);
+		is_event = al_wait_for_event_timed(input_queue,
+										   &event,
+										   TASK_INPUT_EVENT_TIME);
 
-		if (keys[ALLEGRO_KEY_ESCAPE]) {
-			MUTEX_EXP(mux_done, done = TRUE);
-		}
-
-		if (keys[ALLEGRO_KEY_UP]) {
-			MUTEX_LOCK(mux_bubble_scale);
-			if (bubble_scale < BUBBLE_SCALE_MAX) {
-				bubble_scale += BUBBLE_SCALE_STEP;
+		if (is_event == TRUE) {
+			if (event.type == ALLEGRO_EVENT_DISPLAY_CLOSE) {
+				MUTEX_EXP(mux_done, done = TRUE);
 			}
-			MUTEX_UNLOCK(mux_bubble_scale);
-		}
 
-		if (keys[ALLEGRO_KEY_DOWN]) {
-			MUTEX_LOCK(mux_bubble_scale);
-			if (bubble_scale > BUBBLE_SCALE_MIN) {
-				bubble_scale -= BUBBLE_SCALE_STEP;
+			if (keys[ALLEGRO_KEY_ESCAPE]) {
+				MUTEX_EXP(mux_done, done = TRUE);
 			}
-			MUTEX_UNLOCK(mux_bubble_scale);
-		}
 
-		if (keys[ALLEGRO_KEY_LEFT]) {
-			MUTEX_LOCK(mux_active_tasks);
-			if (active_tasks > BUBBLE_TASKS_MIN) {
-				active_tasks--;
+			if (keys[ALLEGRO_KEY_UP]) {
+				MUTEX_LOCK(mux_bubble_scale);
+				if (bubble_scale < BUBBLE_SCALE_MAX) {
+					bubble_scale += BUBBLE_SCALE_STEP;
+				}
+				MUTEX_UNLOCK(mux_bubble_scale);
 			}
-			MUTEX_UNLOCK(mux_active_tasks);
-		}
 
-		if (keys[ALLEGRO_KEY_RIGHT]) {
-			MUTEX_LOCK(mux_active_tasks);
-			if (active_tasks < BUBBLE_TASKS_MAX) {
-				active_tasks++;
+			if (keys[ALLEGRO_KEY_DOWN]) {
+				MUTEX_LOCK(mux_bubble_scale);
+				if (bubble_scale > BUBBLE_SCALE_MIN) {
+					bubble_scale -= BUBBLE_SCALE_STEP;
+				}
+				MUTEX_UNLOCK(mux_bubble_scale);
 			}
-			MUTEX_UNLOCK(mux_active_tasks);
-		}
 
-		if (keys[S2I_KEY_PLUS]) {
-			MUTEX_LOCK(mux_gain);
-			if (gain < GAIN_MAX) {
-				gain += GAIN_STEP;
-				allegro_stream_set_gain(gain);
+			if (keys[ALLEGRO_KEY_LEFT]) {
+				MUTEX_LOCK(mux_active_tasks);
+				if (active_tasks > BUBBLE_TASKS_MIN) {
+					active_tasks--;
+				}
+				MUTEX_UNLOCK(mux_active_tasks);
 			}
-			MUTEX_UNLOCK(mux_gain);
-		}
 
-		if (keys[S2I_KEY_MINUS]) {
-			MUTEX_LOCK(mux_gain);
-			if (gain > GAIN_MIN) {
-				gain -= GAIN_STEP;
-				allegro_stream_set_gain(gain);
+			if (keys[ALLEGRO_KEY_RIGHT]) {
+				MUTEX_LOCK(mux_active_tasks);
+				if (active_tasks < BUBBLE_TASKS_MAX) {
+					active_tasks++;
+				}
+				MUTEX_UNLOCK(mux_active_tasks);
 			}
-			MUTEX_UNLOCK(mux_gain);
-		}
 
-		// Reading numbers from 1 to 7
-		for (i = ALLEGRO_KEY_1; i < ALLEGRO_KEY_8; ++i) {
-			if (keys[i]) {
-				MUTEX_EXP(mux_windowing, windowing = (i - ALLEGRO_KEY_0));
+			if (keys[S2I_KEY_PLUS]) {
+				MUTEX_LOCK(mux_gain);
+				if (gain < GAIN_MAX) {
+					gain += GAIN_STEP;
+					allegro_stream_set_gain(gain);
+				}
+				MUTEX_UNLOCK(mux_gain);
 			}
-		}
 
-		if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
-			keys[event.keyboard.keycode] = TRUE;
-		}
+			if (keys[S2I_KEY_MINUS]) {
+				MUTEX_LOCK(mux_gain);
+				if (gain > GAIN_MIN) {
+					gain -= GAIN_STEP;
+					allegro_stream_set_gain(gain);
+				}
+				MUTEX_UNLOCK(mux_gain);
+			}
 
-		if (event.type == ALLEGRO_EVENT_KEY_UP) {
-			keys[event.keyboard.keycode] = FALSE;
+			// Reading numbers from 1 to 7
+			for (i = ALLEGRO_KEY_1; i < ALLEGRO_KEY_8; ++i) {
+				if (keys[i]) {
+					MUTEX_EXP(mux_windowing, windowing = (i - ALLEGRO_KEY_0));
+				}
+			}
+
+			if (event.type == ALLEGRO_EVENT_KEY_DOWN) {
+				keys[event.keyboard.keycode] = TRUE;
+			}
+
+			if (event.type == ALLEGRO_EVENT_KEY_UP) {
+				keys[event.keyboard.keycode] = FALSE;
+			}
 		}
 
 		MUTEX_EXP(mux_done, done_local = done);
