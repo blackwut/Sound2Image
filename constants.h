@@ -116,9 +116,9 @@
 #define BUBBLE_TASKS_MAX 		32		// maximum amount of bubbles
 #define BUBBLE_LPASS_PARAM		0.5		// low pass filter parameter
 
-#define BUBBLE_SCALE_MIN		0.5f	// minimum scale factor of bubbles
+#define BUBBLE_SCALE_MIN		0.25f	// minimum scale factor of bubbles
 #define BUBBLE_SCALE_BASE		1.0f	// starting scale factor of bubbles
-#define BUBBLE_SCALE_MAX		2.0f	// maximum scale factor of bubbles
+#define BUBBLE_SCALE_MAX		1.5f	// maximum scale factor of bubbles
 #define BUBBLE_SCALE_STEP		0.05f	// incr/decr step of scale factor
 
 #define GAIN_MIN				0		// minimum value of gain volume
