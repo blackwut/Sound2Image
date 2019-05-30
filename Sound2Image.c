@@ -416,7 +416,7 @@ void sound2image_init_variables(char * filename)
 					"File does not exits or it is not compatible");
 	samplerate = fft_audio_get_samplerate();
 	channels = fft_audio_get_channels();
-	frame_samples = fft_audio_get_frame_elements();
+	frame_samples = fft_audio_get_frame_samples();
 
 	// Allegro
 	allegro_init();
