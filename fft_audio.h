@@ -107,7 +107,7 @@ size_t fft_audio_get_channels();
 // The number of samples in a frame.
 //
 //------------------------------------------------------------------------------
-size_t fft_audio_get_frames_elements();
+size_t fft_audio_get_frame_samples();
 
 
 //------------------------------------------------------------------------------
@@ -157,7 +157,7 @@ void fft_audio_compute_fft(fft_audio_windowing windowing);
 // This function fills the provided "buffer" with current frame audio values.
 //
 // PARAMETERS
-// buffer: a float buffer of size (frame_elements * channels)
+// buffer: a float buffer of size (frame_samples * channels)
 //
 //------------------------------------------------------------------------------
 void fft_audio_fill_buffer_data(float * buffer);
